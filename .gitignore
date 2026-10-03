@@ -1,0 +1,124 @@
+# Dependencies
+node_modules/
+package-lock.json
+docs-site/node_modules/
+docs-site/.next/
+docs-site/.source/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+.playwright-cli/
+/output/
+*.app.zip
+.derived-data*/
+.device-id.local
+
+# Local QA media
+app/Sources/SpeakEasy/Resources/Pad/demo-response.*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Config files with secrets
+config.json
+config.local.json
+.npmrc
+
+# Claude files
+.claude/
+.settings.json
+.settings.local.json
+
+# Agent skill symlinks (created by dewey/skills installers)
+.agent/
+.agents/*
+!.agents/plugins/
+.agents/plugins/*
+!.agents/plugins/marketplace.json
+.cline/
+.codebuddy/
+.codex/
+.commandcode/
+.continue/
+.crush/
+.cursor/
+.factory/
+.gemini/
+.github/skills/
+.goose/
+.kilocode/
+.kiro/
+.mcpjam/
+.mux/
+.neovate/
+.opencode/
+.openhands/
+.pi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.windsurf/
+.zencoder/
+skills/
+!plugins/speakeasy/skills/
+!plugins/speakeasy/skills/**
+
+# Test files
+test-*.js
+test-*.json
+gemini-*
+test-request.json
+
+# OpenScout local state
+.openscout/project.json
+
+# Personal development builds
+app/.build/
+karen-voice/target/
+app/Karen SpeakEasy Dev.app/
+
+app/Echo.app/
+
+# Echo: private runtime state and local voice installations
+.env.*
+!.env.example
+settings.json
+completion-subscriptions.json
+*.sentences.json
+*.safetensors
+*.onnx
+.venv/
+qwen-runtime/
+voices/
+__pycache__/
+*.pyc
+# Local handoff / verification records are not application source
+docs/*-verification.json
+docs/KAREN_DEVELOPMENT.md
+docs/qwen-runtime-packages.txt

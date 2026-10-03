@@ -1,0 +1,20 @@
+{
+  "title": "SpeakEasy",
+  "pages": [
+    "index",
+    "quickstart",
+    "---Getting Started---",
+    "listening-mode",
+    "configuration",
+    "providers",
+    "custom-providers",
+    "---Usage---",
+    "cli",
+    "sdk",
+    "cache",
+    "---Reference---",
+    "api",
+    "architecture",
+    "troubleshooting"
+  ]
+}

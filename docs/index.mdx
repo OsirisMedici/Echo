@@ -1,0 +1,88 @@
+---
+title: SpeakEasy
+description: Dual-mode voice for exact Codex Desktop tasks, plus a multi-provider TTS library
+---
+
+# SpeakEasy
+
+SpeakEasy is the voice interface for the Codex task you are already using.
+It combines local speech recognition, exact-task routing, and controllable
+narration without creating a second conversation.
+
+## Choose your path
+
+### SpeakEasy for Codex
+
+Use the native macOS app when you want to:
+
+- dictate into an exact Codex Desktop task from the Mac, browser, or iPad;
+- keep the complete transcript and tool activity in Codex;
+- hear the real response through a native player with queue, replay, speed,
+  volume, and provider controls;
+- map up to nine persistent voice lanes without relying on window focus.
+
+Start with [Listening mode](listening-mode.mdx) or the
+[Codex installation page](https://speakeasy.arach.dev/codex/#codex-install).
+
+Requirements: an Apple silicon Mac running macOS 14 or newer and the current
+Codex Desktop app. The packaged app is self-contained; Bun, Node, Xcode, and a
+source checkout are not required.
+
+### TypeScript library and CLI
+
+Use `@arach/speakeasy` when an application, script, or agent hook needs
+provider-independent text-to-speech.
+
+```bash
+bun add @arach/speakeasy
+```
+
+```typescript
+import { say } from '@arach/speakeasy';
+
+await say('The build is ready.');
+await say('Use the configured OpenAI voice.', 'openai');
+```
+
+Library requirements: Node.js 22.12 or newer, or Bun 1.0 or newer. Native
+system playback is macOS-only; cloud providers require their own API keys.
+
+## Product loop
+
+1. Choose the real Codex task that owns the work.
+2. SpeakEasy validates and locks that exact task ID.
+3. Hold to speak. Audio is transcribed locally on the Mac.
+4. SpeakEasy submits the final text exactly once to the locked task.
+5. The full response stays in Codex and is narrated through SpeakEasy.
+
+If task identity, ownership, or turn correlation cannot be proven, SpeakEasy
+fails closed instead of selecting another task.
+
+## Documentation
+
+- [Quickstart](quickstart.mdx) — install the app or library
+- [Listening mode](listening-mode.mdx) — exact-task voice turns and trust boundary
+- [CLI reference](cli.mdx) — speech and cache commands
+- [SDK guide](sdk.mdx) — TypeScript API
+- [Configuration](configuration.mdx) — providers and global settings
+- [Providers](providers.mdx) — System, OpenAI, ElevenLabs, Groq, and Gemini
+- [Custom providers](custom-providers.md) — add a TTS adapter
+- [Cache](cache.mdx) — local SQLite cache behavior
+- [Troubleshooting](troubleshooting.mdx) — diagnostics and common failures
+
+## Release status
+
+The signed `0.3.0` build is the first complete dual-mode release. It includes
+the paired-HTTPS browser/PWA Deck alongside exact-task dictation and narration
+on the Mac. The native iPad shell remains a developer preview.
+
+See [the GTM control plan](https://github.com/arach/SpeakEasy/blob/master/docs/release/gtm.md)
+for the launch sequence and
+[the second-Mac checklist](https://github.com/arach/SpeakEasy/blob/master/docs/release/self-serve-mac-test.md)
+for the proof gate.
+
+## Support
+
+Run `speakeasy --doctor` for library and provider diagnostics. For the native
+app, open **SpeakEasy → Settings → Deck** and use **Open log** when a
+readiness check fails.

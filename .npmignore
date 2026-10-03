@@ -1,0 +1,18 @@
+# Fallback exclusions (package.json "files" whitelist is authoritative)
+src/
+app/
+landing/
+docs-site/
+docs/
+examples/
+scripts/
+.github/
+test-*.js
+*.md
+!README.md
+bun.lock
+docs.json
+llms.txt
+dewey.config.ts
+AGENTS.md
+CLAUDE.md

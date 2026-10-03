@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpeakEasy — A voice for every agent</title>
+<!--
+  Home is a handoff. The object is a cream script under a lamp.
+  Audio is site-absolute (/audio/*.mp3) from landing/public/audio.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --stage: #090C11;
+    --stage-2: #11161D;
+    --cream: #E8EEF5;
+    --paper: #F5F7FA;
+    --paper-2: #E4E9F0;
+    --ink: #10141A;
+    --ink-2: #3A424C;
+    --ink-3: #6A7380;
+    --mute: #8B95A2;
+    --faint: #5C6672;
+    --line: rgba(220,228,238,.1);
+    --accent: #8FB0FF;
+    --accent-deep: #5A7FE0;
+    --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --pixel: "Silkscreen", ui-monospace, Menlo, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--stage);
+    color: var(--cream);
+    font-family: var(--serif);
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-size: 1.125rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+
+  /* lamp + grain — the room, not a background color */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 55% at 18% 8%, rgba(143,176,255,.16), transparent 58%),
+      radial-gradient(ellipse 50% 40% at 88% 100%, rgba(143,176,255,.05), transparent 50%),
+      var(--stage);
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: .09;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  nav, header, main, footer { position: relative; z-index: 2; }
+
+  ::selection { background: rgba(143,176,255,.32); color: var(--cream); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .skip {
+    position: absolute; left: 1rem; top: -4rem; z-index: 80;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--mono); font-size: .75rem; padding: .5rem .8rem;
+  }
+  .skip:focus { top: 1rem; }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { color: var(--cream); }
+
+  .wrap { width: min(1180px, calc(100% - 3rem)); margin: 0 auto; }
+  @media (max-width: 560px) { .wrap { width: min(1180px, calc(100% - 1.5rem)); } }
+
+  .kicker {
+    font-family: var(--mono); font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent);
+  }
+
+  /* ---- nav ---- */
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--stage) 55%, transparent);
+    backdrop-filter: blur(18px) saturate(1.1);
+    -webkit-backdrop-filter: blur(18px) saturate(1.1);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap {
+    display: flex; align-items: center; justify-content: space-between;
+    min-height: 64px; gap: 1rem;
+  }
+  .wordmark {
+    font-family: var(--pixel); font-style: normal; font-weight: 400;
+    font-size: 1.05rem; letter-spacing: .04em;
+    color: var(--cream); text-decoration: none;
+  }
+  .view-switch {
+    display: flex; flex: none; padding: 3px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: rgba(232,238,245,.05);
+  }
+  .view-switch button {
+    appearance: none; border: 0; cursor: pointer;
+    font-family: var(--mono); font-size: .62rem; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--mute); background: transparent;
+    border-radius: 999px; padding: .42rem .85rem; min-height: 32px;
+  }
+  .view-switch button[aria-checked="true"] {
+    color: var(--ink); background: var(--paper);
+  }
+  .view-switch button:hover:not([aria-checked="true"]) { color: var(--cream); }
+  .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+  .nav-links a {
+    font-family: var(--mono); font-size: .7rem; color: var(--mute);
+    text-decoration: none; letter-spacing: .06em;
+  }
+  .nav-links a:hover { color: var(--cream); }
+  .nav-links a.pad {
+    color: var(--ink); background: var(--paper);
+    border-radius: 999px; padding: .38rem .85rem;
+  }
+  .nav-links a.pad:hover { background: var(--cream); color: var(--ink); }
+  @media (max-width: 720px) {
+    .nav-links a:not(.pad) { display: none; }
+    .view-switch button { padding: .42rem .65rem; }
+  }
+
+  /* ---- hero ---- */
+  .hero {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 3.5rem 4rem;
+    align-items: start;
+    padding: 3.2rem 0 4rem;
+  }
+  @media (max-width: 980px) {
+    .hero { grid-template-columns: 1fr; gap: 2.4rem; padding: 2.2rem 0 2rem; }
+  }
+
+  .hero h1 {
+    font-weight: 300; font-size: clamp(3.1rem, 6.4vw, 5.6rem);
+    line-height: .94; letter-spacing: -0.035em;
+    text-wrap: balance;
+    margin-top: .85rem;
+  }
+  .hero h1 em {
+    font-style: italic; font-weight: 300;
+    color: color-mix(in srgb, var(--cream) 82%, var(--accent));
+  }
+  .lede {
+    margin-top: 1.6rem; max-width: 34rem;
+    font-size: 1.2rem; font-weight: 300; line-height: 1.5;
+    color: color-mix(in srgb, var(--cream) 62%, var(--mute));
+    text-wrap: pretty;
+  }
+
+  .trace {
+    margin-top: 2.2rem; width: min(100%, 28rem); height: 52px;
+    color: var(--accent);
+  }
+  .trace path {
+    fill: none; stroke: currentColor; stroke-width: 1.4;
+    stroke-linecap: round; stroke-linejoin: round;
+    opacity: .85;
+  }
+  .trace .ghost { opacity: .22; }
+  @media (prefers-reduced-motion: no-preference) {
+    .trace .live {
+      stroke-dasharray: 8 14;
+      animation: crawl 7s linear infinite;
+    }
+  }
+  @keyframes crawl { to { stroke-dashoffset: -180; } }
+
+  /* ---- script card (the object) ---- */
+  .script {
+    position: relative;
+    background:
+      linear-gradient(180deg, #FBFCFE 0%, var(--paper) 46%, #E6EBF1 100%);
+    color: var(--ink);
+    border-radius: 3px 18px 16px 4px;
+    padding: 1.7rem 1.7rem 1.5rem 2rem;
+    transform: rotate(-1.1deg);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.85),
+      inset 0 -1px 0 rgba(40,60,90,.06),
+      0 1px 1px rgba(0,0,0,.12),
+      0 28px 50px -18px rgba(0,0,0,.55),
+      0 0 90px -30px rgba(143,176,255,.28);
+  }
+  .script::before {
+    content: "";
+    position: absolute; left: 18px; top: 0; bottom: 0; width: 1px;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 10px,
+      rgba(90,127,224,.35) 10px 11px,
+      transparent 11px 22px
+    );
+  }
+  .script::after {
+    content: "";
+    position: absolute; right: 22px; top: 18px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #2A3340, #090C11 70%);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.08), 0 0 0 3px color-mix(in srgb, var(--paper) 70%, #C5CDD8);
+  }
+  .script .head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono); font-size: .62rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-3);
+    padding-left: .4rem;
+  }
+  .script .head .to { color: var(--accent-deep); }
+  .script .prompt {
+    margin: 1.15rem 0 0;
+    font-family: var(--mono); font-size: .95rem; line-height: 1.6;
+    color: var(--ink);
+    padding-left: .4rem;
+    text-wrap: pretty;
+  }
+  .script .prompt u {
+    text-decoration-color: rgba(90,127,224,.45);
+    text-underline-offset: 4px;
+  }
+  .actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
+    margin-top: 1.35rem; padding-left: .4rem;
+  }
+  .copy {
+    appearance: none; border: 0; cursor: pointer;
+    font-family: var(--mono); font-size: .68rem; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase;
+    background: var(--ink); color: var(--paper);
+    border-radius: 999px; padding: .75rem 1.1rem; min-height: 44px;
+    transition: transform .12s ease, background .15s ease;
+  }
+  .copy:hover { background: #000; }
+  .copy:active { transform: translateY(1px); }
+  .copy.done { background: #1E2A44; color: var(--accent); }
+  .read {
+    font-family: var(--mono); font-size: .72rem; color: var(--ink-2);
+    text-decoration: none; min-height: 44px; display: inline-flex; align-items: center;
+  }
+  .read:hover { color: var(--ink); }
+  .split {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem;
+    margin-top: 1.35rem; padding: 1.15rem 0 0 .4rem;
+    border-top: 1px dashed rgba(74,64,54,.28);
+  }
+  @media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
+  .split h3 {
+    font-family: var(--mono); font-size: .6rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+  }
+  .split ul { list-style: none; margin-top: .4rem; }
+  .split li { font-size: .86rem; line-height: 1.4; color: var(--ink-2); padding: .12rem 0; }
+
+  /* ---- bands ---- */
+  .band { padding: 5rem 0 1rem; }
+  .band-head { max-width: 36rem; margin-bottom: 2.2rem; }
+  .band h2 {
+    font-weight: 300; font-size: clamp(2rem, 3.6vw, 2.8rem);
+    letter-spacing: -0.03em; line-height: 1.05;
+  }
+  .band-head p {
+    margin-top: .8rem; color: var(--mute); font-weight: 300; font-size: 1.1rem;
+  }
+
+  /* hooks as a patchbay */
+  .bay {
+    border-top: 1px solid var(--line);
+  }
+  .jack {
+    display: grid; grid-template-columns: 11.5rem 1fr;
+    gap: 1.4rem; align-items: start;
+    padding: 1.35rem 0 1.4rem;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 640px) { .jack { grid-template-columns: 1fr; gap: .5rem; } }
+  .who {
+    display: flex; align-items: center; gap: .75rem;
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--mute); padding-top: .15rem;
+  }
+  .mark {
+    width: 32px; height: 32px; flex: none;
+    display: grid; place-items: center;
+    color: var(--cream);
+    background: rgba(232,238,245,.06);
+    border: 1px solid rgba(232,238,245,.1);
+    border-radius: 9px;
+  }
+  .mark svg { width: 18px; height: 18px; fill: currentColor; display: block; }
+  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .55rem; }
+  .tags span {
+    font-family: var(--mono); font-size: .58rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--mute);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: .22rem .55rem;
+  }
+  .jack.turnkey .tags .mode {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  }
+  .jack h3 { font-weight: 400; font-size: 1.35rem; letter-spacing: -0.02em; }
+  .jack p { margin-top: .3rem; color: var(--mute); font-weight: 300; font-size: 1.02rem; max-width: 40rem; }
+
+  .tell {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    gap: 0 .85rem; margin-top: .45rem;
+  }
+  .tell-btn {
+    appearance: none; border: 0; background: none; cursor: pointer;
+    font-family: var(--mono); font-size: .62rem; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); padding: .2rem 0; min-height: 36px;
+  }
+  .tell-btn:hover { color: var(--cream); }
+  .tell-btn.done { color: var(--cream); }
+  .jack .tell-line {
+    margin: 0;
+    font-family: var(--mono); font-size: .75rem; font-weight: 400; line-height: 1.45;
+    color: var(--faint); letter-spacing: .01em; text-wrap: pretty;
+    max-width: 38rem;
+  }
+  .tell-line u {
+    text-decoration-color: color-mix(in srgb, var(--accent) 38%, transparent);
+    text-underline-offset: 3px;
+  }
+  .doc[data-view="you"] .tell:not(.open) .tell-line { display: none; }
+  .doc[data-view="agent"] .tell-line,
+  .tell.open .tell-line { order: 1; }
+  .doc[data-view="agent"] .tell-btn,
+  .tell.open .tell-btn { order: 2; color: var(--mute); }
+
+  /* hear — a wide instrument slab */
+  .hear {
+    margin-top: .4rem;
+    background: linear-gradient(180deg, #161C26, #10151C);
+    border: 1px solid rgba(220,228,238,.1);
+    border-radius: 22px;
+    padding: 1.2rem 1.3rem 1.15rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 20px 40px -28px rgba(0,0,0,.7);
+    display: grid; grid-template-columns: auto 1fr; gap: 1.1rem 1.3rem;
+    align-items: center;
+  }
+  @media (max-width: 640px) { .hear { grid-template-columns: 1fr; } }
+  .play {
+    width: 4.2rem; height: 4.2rem; border-radius: 50%;
+    border: 0; cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, #E8F0FF, var(--accent) 50%, var(--accent-deep));
+    color: #0E1420;
+    display: grid; place-items: center;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.45),
+      0 8px 20px -6px rgba(143,176,255,.45);
+    transition: transform .12s ease;
+  }
+  .play:hover { transform: scale(1.04); }
+  .play:active { transform: scale(.98); }
+  .play svg { width: 1.05rem; height: 1.05rem; margin-left: 2px; }
+  .hear .copyline {
+    font-size: 1.15rem; font-weight: 300; color: var(--cream);
+  }
+  .hear .copyline em { font-style: italic; }
+  .wave {
+    grid-column: 1 / -1; height: 46px; width: 100%;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .wave i {
+    display: block; flex: 1; height: 18%;
+    background: color-mix(in srgb, var(--accent) 55%, #1A2230);
+    border-radius: 2px;
+    transform-origin: center;
+  }
+  .playing .wave i { background: var(--accent); animation: bar 1s ease-in-out infinite; }
+  .wave i:nth-child(4n) { height: 42%; }
+  .wave i:nth-child(4n+1) { height: 22%; }
+  .wave i:nth-child(4n+2) { height: 70%; }
+  .wave i:nth-child(4n+3) { height: 34%; }
+  .wave i:nth-child(5n) { height: 88%; }
+  .playing .wave i:nth-child(3n) { animation-duration: .72s; }
+  .playing .wave i:nth-child(3n+1) { animation-duration: 1.15s; }
+  @keyframes bar { 50% { transform: scaleY(1.55); } }
+
+  /* pad door */
+  .door {
+    display: block; text-decoration: none; color: inherit;
+    margin-top: 1.4rem; padding: 1.5rem 1.6rem;
+    border-radius: 20px;
+    background:
+      linear-gradient(135deg, rgba(143,176,255,.1), transparent 42%),
+      linear-gradient(180deg, #161C26, #10151C);
+    border: 1px solid rgba(220,228,238,.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    transition: border-color .16s ease, transform .16s ease;
+  }
+  .door:hover { border-color: rgba(143,176,255,.45); transform: translateY(-2px); }
+  .door .go { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .door h3 { font-size: 1.8rem; font-weight: 300; letter-spacing: -0.03em; }
+  .door .arrow {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .14em;
+    color: var(--accent);
+  }
+  .door p { margin-top: .45rem; color: var(--mute); font-weight: 300; max-width: 38rem; }
+
+  /* library */
+  .lib-row { display: flex; gap: .45rem; margin-top: 1.1rem; }
+  .lib-row button {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
+    color: var(--mute); background: transparent;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: .45rem .85rem; cursor: pointer;
+  }
+  .lib-row button.active, .lib-row button:hover {
+    color: var(--cream); border-color: rgba(220,228,238,.28);
+  }
+  .cmd {
+    margin-top: .8rem;
+    font-family: var(--mono); font-size: .88rem;
+    background: #10151C; border: 1px solid var(--line);
+    border-radius: 12px; padding: .9rem 1rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  }
+  .cmd button {
+    font-family: var(--mono); font-size: .65rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--mute);
+    background: none; border: 1px solid var(--line); border-radius: 999px;
+    padding: .4rem .75rem; cursor: pointer; min-height: 36px;
+  }
+  .cmd button:hover { color: var(--cream); }
+
+  footer {
+    margin-top: 4.5rem; padding: 1.6rem 0 2.6rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .08em;
+    color: var(--faint);
+  }
+  footer .wrap { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  footer a { color: var(--mute); text-decoration: none; }
+  footer a:hover { color: var(--cream); }
+
+  .sr-status {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .script { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="doc" data-view="you">
+<a class="skip" href="#dispatch">Skip to tell your agent</a>
+
+<nav>
+  <div class="wrap">
+    <a class="wordmark" href="/">SpeakEasy</a>
+    <div class="view-switch" role="radiogroup" aria-label="Page view">
+      <button type="button" role="radio" aria-checked="true" tabindex="0" data-view="you" id="viewYou">You</button>
+      <button type="button" role="radio" aria-checked="false" tabindex="-1" data-view="agent" id="viewAgent">Agent</button>
+    </div>
+    <div class="nav-links">
+      <a href="{{releaseDownloadUrl}}">Download DMG</a>
+      <a href="/docs/">Docs</a>
+      <a href="https://github.com/arach/SpeakEasy">GitHub</a>
+      <a class="pad" href="/codex/">The Pad</a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div>
+    <p class="kicker">A voice layer for coding agents</p>
+    <h1>Every agent needs its own <em>voice.</em></h1>
+    <p class="lede">
+      SpeakEasy is how an agent talks, and how you talk back. The primitives
+      are the same in every harness. Codex and Claude have a turnkey hook.
+      Everywhere else, the agent reads the runbook and does the last mile.
+    </p>
+    <svg class="trace" viewBox="0 0 440 52" aria-hidden="true">
+      <path class="ghost" d="M0 28 C28 28 32 10 52 10 C78 10 80 42 108 42 C132 42 138 16 164 16 C194 16 196 36 224 36 C250 36 256 8 286 8 C318 8 322 44 352 44 C378 44 386 22 412 22 L440 22"/>
+      <path class="live" d="M0 28 C28 28 32 10 52 10 C78 10 80 42 108 42 C132 42 138 16 164 16 C194 16 196 36 224 36 C250 36 256 8 286 8 C318 8 322 44 352 44 C378 44 386 22 412 22 L440 22"/>
+    </svg>
+  </div>
+
+  <aside class="script" id="dispatch">
+    <div class="head">
+      <span class="to">Tell your agent</span>
+      <span>SE–DISPATCH</span>
+    </div>
+    <p class="prompt" id="askText" translate="no">Read <u>https://speakeasy.arach.dev/agent.md</u> and follow it.</p>
+    <div class="actions">
+      <button class="copy" id="copyDispatch" type="button">Copy this sentence</button>
+      <a class="read" href="{{releaseDownloadUrl}}">Download Mac app · {{releaseVersion}}</a>
+    </div>
+    <span class="sr-status" id="copyStatus" aria-live="polite"></span>
+    <div class="split">
+      <div>
+        <h3>The agent does</h3>
+        <ul>
+          <li>Picks the smallest path that matches what you asked.</li>
+          <li>Verifies before anything is spoken.</li>
+          <li>Stops if a check fails. It does not improvise.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>You do</h3>
+        <ul>
+          <li>Paste this into whichever agent you have open.</li>
+          <li>Name the agent if you care. Otherwise it uses the primitives.</li>
+          <li>Click Allow only when macOS asks you to.</li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+</header>
+
+<main>
+  <section class="wrap band" id="hooks">
+    <div class="band-head">
+      <h2>Each system gets a hook</h2>
+      <p>The primitives are the product. A turnkey hook is just the last mile, packaged. If there isn’t one, the agent wires it.</p>
+    </div>
+    <div class="bay">
+      <article class="jack primitives">
+        <div class="who">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 1 1-6 0V6a3 3 0 0 1 3-3zm-7 9a1 1 0 0 1 1 1 6 6 0 0 0 12 0 1 1 0 1 1 2 0 8 8 0 0 1-7 7.94V22a1 1 0 1 1-2 0v-1.06A8 8 0 0 1 4 13a1 1 0 0 1 1-1z"/></svg>
+          </span>
+          Any agent
+        </div>
+        <div>
+          <div class="tags"><span>Supported</span><span class="mode">Primitives</span></div>
+          <h3>Speak, verify, stop</h3>
+          <p>One sentence, macOS system voice, nothing written into the project. No API key. This is what “follow it” means if you do not name a hook.</p>
+          <div class="tell">
+            <button type="button" class="tell-btn" data-copy="Install SpeakEasy and set up TTS on this Mac. Read https://speakeasy.arach.dev/agent.md and follow Path 1. System voice, no API key, nothing added to the project.">Tell your agent</button>
+            <p class="tell-line">Install SpeakEasy and set up TTS.</p>
+          </div>
+        </div>
+      </article>
+      <article class="jack turnkey">
+        <div class="who">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.911 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.182a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .511 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.989 5.989 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zm-9.022 12.608a4.476 4.476 0 0 1-2.876-1.041l.142-.08 4.778-2.758a.795.795 0 0 0 .393-.682v-6.736l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.495 4.494zm-9.661-4.125a4.471 4.471 0 0 1-.535-3.014l.142.085 4.783 2.758a.771.771 0 0 0 .781 0l5.843-3.368v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.499 4.499 0 0 1-6.141-1.646zM2.341 7.896A4.485 4.485 0 0 1 4.706 5.924V11.6a.766.766 0 0 0 .388.676l5.814 3.355-2.02 1.168a.076.076 0 0 1-.071 0L3.987 14.013A4.504 4.504 0 0 1 2.341 7.932zm16.596 3.856-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.104v-5.677a.79.79 0 0 0-.407-.667zm2.011-3.023-.142-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.499 4.499 0 0 1 6.681 4.66zM8.306 12.863l-2.02-1.164a.08.08 0 0 1-.038-.057V6.074a4.499 4.499 0 0 1 7.376-3.454l-.142.081L8.704 5.459a.795.795 0 0 0-.393.681zm1.098-2.365 2.602-1.5 2.607 1.5v3l-2.598 1.5-2.606-1.5z"/></svg>
+          </span>
+          Codex
+        </div>
+        <div>
+          <div class="tags"><span>Supported</span><span class="mode">Turnkey</span></div>
+          <h3>Talk both ways, into the exact task</h3>
+          <p>Spoken replies through the skill and player. Talk back through the Mac app. The Pad is that loop on a tablet.</p>
+          <div class="tell">
+            <button type="button" class="tell-btn" data-copy="Install the SpeakEasy Codex hook on this Mac. Read https://speakeasy.arach.dev/agent.md and follow Path 2. If I want talk-back, dictation, or the Pad, that's Path 3.">Tell your agent</button>
+            <p class="tell-line">Install the Codex hook and set up TTS.</p>
+          </div>
+        </div>
+      </article>
+      <article class="jack turnkey">
+        <div class="who">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.369-3.553h7.005l1.369 3.553h3.745L10.536 3.541Zm-.371 10.223 2.291-5.946 2.292 5.946Z"/></svg>
+          </span>
+          Claude
+        </div>
+        <div>
+          <div class="tags"><span>Supported</span><span class="mode">Turnkey</span></div>
+          <h3>Skill and player, its own hook</h3>
+          <p>Queue, pause, speed, transcript. Talk-back into a Claude task uses the same two-way shape as Codex.</p>
+          <div class="tell">
+            <button type="button" class="tell-btn" data-copy="Install the SpeakEasy skill for Claude Code and set up TTS. Read https://speakeasy.arach.dev/agent.md and follow Path 2 with npx @arach/speakeasy plugin claude.">Tell your agent</button>
+            <p class="tell-line">Install the Claude skill and set up TTS.</p>
+          </div>
+        </div>
+      </article>
+      <article class="jack primitives">
+        <div class="who">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M11.925 24 22.35 18l-10.425-6L1.5 18l10.425 6z"/><path d="M22.35 18V6L11.925 0v12l10.425 6z" opacity=".8"/><path d="M11.925 12V0L1.5 6v12l10.425-6z" opacity=".6"/></svg>
+          </span>
+          Cursor · others
+        </div>
+        <div>
+          <div class="tags"><span>Supported</span><span class="mode">Primitives</span></div>
+          <h3>Same primitives. The agent does the last mile.</h3>
+          <p>There is no packaged hook yet. The runbook is enough: speak, verify, stop. The agent wires that into the harness it is already running in.</p>
+          <div class="tell">
+            <button type="button" class="tell-btn" data-copy="I'm on Cursor. Install SpeakEasy and set up TTS. Read https://speakeasy.arach.dev/agent.md and follow Path 1. Wire it with a stop hook or a skill file — there is no packaged hook.">Tell your agent</button>
+            <p class="tell-line">Install SpeakEasy and wire TTS into Cursor.</p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="wrap band" id="hear">
+    <div class="band-head">
+      <h2>What a sentence sounds like</h2>
+      <p>System voice, no key. This is the default path making sound.</p>
+    </div>
+    <div class="hear" id="hearDeck">
+      <button class="play" data-src="/audio/tagline-demo.mp3" aria-label="Play a spoken sentence">
+        <svg viewBox="0 0 12 14" fill="currentColor" aria-hidden="true"><path d="M0 0 L12 7 L0 14 Z"/></svg>
+      </button>
+      <p class="copyline">“<em>Text to speech, with nothing in the way.</em>”</p>
+      <div class="wave" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap band" id="pad">
+    <div class="band-head">
+      <h2>Talk-back, first on Codex</h2>
+      <p>The Pad is the Codex hook made visible. Other agents will get a surface in the same shape, not a different product.</p>
+    </div>
+    <a class="door" href="/codex/">
+      <div class="go">
+        <h3>The Pad</h3>
+        <span class="arrow">SEE IT →</span>
+      </div>
+      <p>Nine lanes for Codex tasks already running. Hold to speak, hear the same task answer. The Mac is required. The iPad build is still coming.</p>
+    </a>
+  </section>
+
+  <section class="wrap band" id="library">
+    <div class="band-head">
+      <h2>If you are writing an app</h2>
+      <p>The original library is still here. Add it only when you asked for a dependency.</p>
+    </div>
+    <div class="lib-row" id="libTabs">
+      <button type="button" class="active" data-cmd="bun add @arach/speakeasy">bun</button>
+      <button type="button" data-cmd="npm install @arach/speakeasy">npm</button>
+      <button type="button" data-cmd="pnpm add @arach/speakeasy">pnpm</button>
+    </div>
+    <div class="cmd">
+      <span id="libCmd">bun add @arach/speakeasy</span>
+      <button type="button" id="copyLib">Copy</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>SPEAKEASY · MACOS · CODEX FIRST</span>
+    <span>
+      <a href="/agent.md">agent.md</a>
+      &nbsp;·&nbsp;
+      <a href="/llms.txt">llms.txt</a>
+      &nbsp;·&nbsp;
+      <a href="/docs/">docs</a>
+    </span>
+  </div>
+</footer>
+</div>
+
+<script>
+(function () {
+  var DISPATCH = "Read https://speakeasy.arach.dev/agent.md and follow it.";
+
+  function textOf(id) {
+    var el = document.getElementById(id);
+    return el ? el.textContent.replace(/\s+/g, " ").trim() : "";
+  }
+  function viewRoot() {
+    return document.querySelector(".doc") || document.documentElement;
+  }
+  function tellRest(btn) {
+    var open = btn.parentNode && btn.parentNode.classList.contains("open");
+    var agent = viewRoot().getAttribute("data-view") === "agent";
+    return (open || agent) ? "Copy" : "Tell your agent";
+  }
+  function copyText(text, btn, live, doneLabel, restLabel) {
+    var finish = function () {
+      if (btn) {
+        btn.textContent = doneLabel;
+        btn.classList.add("done");
+        window.setTimeout(function () {
+          btn.textContent = typeof restLabel === "function" ? restLabel() : restLabel;
+          btn.classList.remove("done");
+        }, 1600);
+      }
+      if (live) live.textContent = "Copied.";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(finish, finish);
+    } else { finish(); }
+  }
+  function copyFrom(id, btn, live, doneLabel, restLabel) {
+    copyText(textOf(id), btn, live, doneLabel, restLabel);
+  }
+
+  var live = document.getElementById("copyStatus");
+
+  function viewFromLocation() {
+    try {
+      if (new URLSearchParams(location.search).get("view") === "agent") return "agent";
+    } catch (e) {}
+    if (location.hash === "#agent") return "agent";
+    return "you";
+  }
+
+  function setView(view, opts) {
+    var next = view === "agent" ? "agent" : "you";
+    viewRoot().setAttribute("data-view", next);
+    ["viewYou", "viewAgent"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var on = (id === "viewAgent") === (next === "agent");
+      el.setAttribute("aria-checked", on ? "true" : "false");
+      el.tabIndex = on ? 0 : -1;
+    });
+    document.querySelectorAll(".tell-btn").forEach(function (btn) {
+      if (!btn.classList.contains("done")) btn.textContent = tellRest(btn);
+    });
+    if (live) live.textContent = next === "agent" ? "Agent view." : "Your view.";
+    if (!opts || !opts.skipUrl) {
+      var url = new URL(location.href);
+      if (next === "agent") url.searchParams.set("view", "agent");
+      else url.searchParams.delete("view");
+      if (url.hash === "#agent") url.hash = "";
+      var nextHref = url.pathname + url.search + url.hash;
+      if (nextHref !== location.pathname + location.search + location.hash) {
+        history.replaceState(null, "", nextHref);
+      }
+    }
+  }
+
+  document.querySelectorAll(".view-switch button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setView(btn.getAttribute("data-view"));
+    });
+  });
+  var group = document.querySelector(".view-switch");
+  if (group) {
+    group.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
+      e.preventDefault();
+      var next = (e.key === "ArrowRight" || e.key === "End") ? "agent" : "you";
+      setView(next);
+      var el = document.getElementById(next === "agent" ? "viewAgent" : "viewYou");
+      if (el) el.focus();
+    });
+  }
+
+  var copyDispatch = document.getElementById("copyDispatch");
+  if (copyDispatch) {
+    copyDispatch.addEventListener("click", function () {
+      copyText(DISPATCH, copyDispatch, live, "Copied — paste it", "Copy this sentence");
+    });
+  }
+
+  document.querySelectorAll(".tell-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var wrap = btn.parentNode;
+      if (wrap) wrap.classList.add("open");
+      copyText(btn.getAttribute("data-copy") || DISPATCH, btn, live, "Copied", function () {
+        return tellRest(btn);
+      });
+    });
+  });
+
+  // After parse/hydrate. Running setView during HTML parse rewrites the mock
+  // markup (aria, button labels) and trips React's hydration check.
+  window.setTimeout(function () {
+    setView(viewFromLocation(), { skipUrl: true });
+  }, 0);
+  window.addEventListener("popstate", function () {
+    setView(viewFromLocation(), { skipUrl: true });
+  });
+
+  var copyLib = document.getElementById("copyLib");
+  if (copyLib) {
+    copyLib.addEventListener("click", function () {
+      copyFrom("libCmd", copyLib, null, "Copied", "Copy");
+    });
+  }
+  document.querySelectorAll("#libTabs button").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      document.querySelectorAll("#libTabs button").forEach(function (t) { t.classList.remove("active"); });
+      tab.classList.add("active");
+      var cmd = document.getElementById("libCmd");
+      if (cmd) cmd.textContent = tab.getAttribute("data-cmd");
+    });
+  });
+
+  var audio = new Audio();
+  var deck = document.getElementById("hearDeck");
+  var current = null;
+  function stop() {
+    if (!current) return;
+    current.classList.remove("playing");
+    if (deck) deck.classList.remove("playing");
+    current = null;
+    audio.pause();
+  }
+  document.querySelectorAll(".play").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (current === btn) { stop(); return; }
+      stop();
+      audio.src = btn.getAttribute("data-src");
+      audio.play().catch(function () {});
+      current = btn;
+      btn.classList.add("playing");
+      if (deck) deck.classList.add("playing");
+    });
+  });
+  audio.addEventListener("ended", stop);
+})();
+</script>
+</body>
+</html>

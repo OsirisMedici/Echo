@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="porcelain" data-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE PAD — SpeakEasy control surface for Codex</title>
+<style>
+/* ============ TWO AXES: FINISH x MODE ============
+   FINISH (data-theme, the five swatches) skins the INSTRUMENT surfaces only:
+   the unit, pads, big pad, player, micro deck, speak bar, swatch previews.
+   MODE (data-mode, else prefers-color-scheme) owns the PAGE: bg, text,
+   hairlines, panels. The light palette is fully defined on bare :root; dark
+   is an override — no color lives only inside a media query. */
+
+/* Each finish also carries its own LIGHTING pair (--f-bev-hi / --f-bev-lo) and its
+   own HARDWARE metal (--f-metal-a / --f-metal-b). Bevels used to be hardcoded
+   rgba(255,255,255,…) / rgba(0,0,0,…), which is only correct on a dark slab: on
+   porcelain the highlight vanished into white and the shadow smeared grey. */
+
+/* ---- finishes (instrument skins) ---- */
+:root[data-theme="flight"], .theme-flight {
+  --f-text:#E8ECEF; --f-muted:#8A949C; --f-faint:#6E7982;
+  --f-accent:#6FE3B4; --f-accent-ink:#062A1E; --f-amber:#F0B45A; --f-red:#F0645A;
+  --f-slab-hi:#262E34; --f-slab-lo:#12171B; --f-slab-edge:#313A41;
+  --f-pad-hi:#1B2329; --f-pad-lo:#141A1F; --f-pad-edge:#29323A; --f-pad-text:#C7D0D6;
+  --f-floor:rgba(0,0,0,.55);
+  --f-bev-hi:rgba(255,255,255,.10); --f-bev-lo:rgba(0,0,0,.46);
+  --f-metal-a:#4A545C; --f-metal-b:#1C2227;
+}
+:root[data-theme="paper"], .theme-paper {
+  --f-text:#2A251C; --f-muted:#6E6455; --f-faint:#8A7F6B;
+  --f-accent:#2F6B4F; --f-accent-ink:#F3EFE2; --f-amber:#9A6421; --f-red:#B4443C;
+  --f-slab-hi:#FCF8EE; --f-slab-lo:#E9E1CE; --f-slab-edge:#C9BCA2;
+  --f-pad-hi:#FDFAF2; --f-pad-lo:#EFE8D6; --f-pad-edge:#CFC3AA; --f-pad-text:#3A3327;
+  --f-floor:rgba(96,84,58,.25);
+  --f-bev-hi:rgba(255,255,255,.85); --f-bev-lo:rgba(104,86,54,.22);
+  --f-metal-a:#CFC2A8; --f-metal-b:#8C7E62;
+}
+:root[data-theme="obsidian"], .theme-obsidian {
+  --f-text:#E6E9EE; --f-muted:#7E8894; --f-faint:#69737F;
+  --f-accent:#9FB4FF; --f-accent-ink:#101736; --f-amber:#F0B45A; --f-red:#F0645A;
+  --f-slab-hi:#1D232B; --f-slab-lo:#0E1216; --f-slab-edge:#2B333D;
+  --f-pad-hi:#171D24; --f-pad-lo:#10151A; --f-pad-edge:#28303A; --f-pad-text:#B9C3CE;
+  --f-floor:rgba(0,0,0,.6);
+  --f-bev-hi:rgba(255,255,255,.09); --f-bev-lo:rgba(0,0,0,.55);
+  --f-metal-a:#3D4650; --f-metal-b:#161B21;
+}
+:root[data-theme="ember"], .theme-ember {
+  --f-text:#F1E7E0; --f-muted:#9C8A80; --f-faint:#7E6C61;
+  --f-accent:#FF7A4D; --f-accent-ink:#33110A; --f-amber:#F0B45A; --f-red:#F0645A;
+  --f-slab-hi:#2C201B; --f-slab-lo:#181210; --f-slab-edge:#40302A;
+  --f-pad-hi:#241B16; --f-pad-lo:#1A1310; --f-pad-edge:#3A2C25; --f-pad-text:#D9C8BC;
+  --f-floor:rgba(0,0,0,.5);
+  --f-bev-hi:rgba(255,235,225,.09); --f-bev-lo:rgba(0,0,0,.5);
+  --f-metal-a:#5C4A41; --f-metal-b:#221913;
+}
+/* Porcelain is the default finish: it is the bare :root fallback as well as an
+   explicitly selectable theme, so an unset data-theme lands here, not on flight. */
+:root, :root[data-theme="porcelain"], .theme-porcelain {
+  --f-text:#151C21; --f-muted:#5A666F; --f-faint:#73818A;
+  --f-accent:#1A8A9C; --f-accent-ink:#F3FBFC; --f-amber:#9A6421; --f-red:#B4443C;
+  --f-slab-hi:#FFFFFF; --f-slab-lo:#E1E8ED; --f-slab-edge:#B6C4CD;
+  --f-pad-hi:#FFFFFF; --f-pad-lo:#E6EEF2; --f-pad-edge:#B8C7D0; --f-pad-text:#1E282E;
+  --f-floor:rgba(40,58,70,.18);
+  --f-bev-hi:rgba(255,255,255,.95); --f-bev-lo:rgba(28,52,66,.18);
+  --f-metal-a:#C5D2D9; --f-metal-b:#7A8B95;
+}
+
+/* ---- page mode: light (complete default on bare :root) ---- */
+:root {
+  color-scheme:light;
+  --bg:#FBFCFD; --bg2:#F4F7F9; --panel:#FFFFFF; --hairline:#E4EAEE; --hairline2:#D0D8DE;
+  --text:#151C21; --muted:#5A666F; --faint:#73818A;
+  --accent:#1A8A9C; --accent-ink:#F3FBFC; --amber:#8A5F1C; --red:#B4443C;
+  --floor:rgba(40,58,70,.16);
+  /* page-card lighting: one raised-paper treatment shared by every flat panel */
+  --card-hi:rgba(255,255,255,.9);
+  --card-sh:0 1px 1px rgba(28,52,66,.04), 0 10px 26px -20px rgba(28,52,66,.40);
+  /* finish aliases, so page-level chrome (e.g. .key.ghost) can borrow the instrument skin */
+  --slab-hi:var(--f-slab-hi); --slab-lo:var(--f-slab-lo); --slab-edge:var(--f-slab-edge);
+  --pad-hi:var(--f-pad-hi); --pad-lo:var(--f-pad-lo); --pad-edge:var(--f-pad-edge); --pad-text:var(--f-pad-text);
+  --bev-hi:var(--f-bev-hi); --bev-lo:var(--f-bev-lo);
+  --metal-a:var(--f-metal-a); --metal-b:var(--f-metal-b);
+}
+
+/* ---- page mode: dark (warm graphite, lifted off black; override only) ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) {
+    color-scheme:dark;
+    --bg:#14181C; --bg2:#101418; --panel:#1C2228; --hairline:#2A323A; --hairline2:#3A444C;
+    --text:#E8EEF2; --muted:#8B969E; --faint:#6E7A82;
+    --accent:#7EC9D4; --accent-ink:#062228; --amber:#F0B45A; --red:#F0645A;
+    --floor:rgba(0,0,0,.5);
+    --card-hi:rgba(255,255,255,.05);
+    --card-sh:0 1px 1px rgba(0,0,0,.22), 0 12px 30px -22px rgba(0,0,0,.85);
+  }
+}
+:root[data-mode="dark"] {
+  color-scheme:dark;
+  --bg:#14181C; --bg2:#101418; --panel:#1C2228; --hairline:#2A323A; --hairline2:#3A444C;
+  --text:#E8EEF2; --muted:#8B969E; --faint:#6E7A82;
+  --accent:#7EC9D4; --accent-ink:#062228; --amber:#F0B45A; --red:#F0645A;
+  --floor:rgba(0,0,0,.5);
+  --card-hi:rgba(255,255,255,.05);
+  --card-sh:0 1px 1px rgba(0,0,0,.22), 0 12px 30px -22px rgba(0,0,0,.85);
+}
+
+/* ---- instrument surfaces re-map the generic tokens onto the active finish ---- */
+.unit, .bigpad, .player, .md-grid, .speakbar, .prev {
+  --text:var(--f-text); --muted:var(--f-muted); --faint:var(--f-faint);
+  --accent:var(--f-accent); --accent-ink:var(--f-accent-ink);
+  --amber:var(--f-amber); --red:var(--f-red);
+  --slab-hi:var(--f-slab-hi); --slab-lo:var(--f-slab-lo); --slab-edge:var(--f-slab-edge);
+  --pad-hi:var(--f-pad-hi); --pad-lo:var(--f-pad-lo); --pad-edge:var(--f-pad-edge); --pad-text:var(--f-pad-text);
+  --bev-hi:var(--f-bev-hi); --bev-lo:var(--f-bev-lo);
+  --metal-a:var(--f-metal-a); --metal-b:var(--f-metal-b);
+  --floor:var(--f-floor);
+}
+
+/* ============ BASE ============ */
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  transition:background .5s ease, color .5s ease;
+}
+.mono { font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+/* Mono size ramp: 8 (hardware micro) · 9 (secondary) · 10 (eyebrow) · 11–12 (titles).
+   Tracking loosens as the size drops, so every step reads as the same voice. */
+.label {
+  font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size:10px; line-height:1.7; letter-spacing:.22em; text-transform:uppercase; color:var(--faint);
+}
+.label.acc { color:var(--accent); }
+/* Letterspaced caps carry a trailing sidebearing; flush-right labels pull it back
+   with a -1ch-ish negative margin at their own tracking (see .unit-head, .swlabel, footer). */
+.wrap { max-width:1220px; margin:0 auto; padding:0 28px; }
+section { position:relative; }
+.hairline-t { border-top:1px solid var(--hairline); }
+a { color:inherit; text-decoration:none; }
+::selection { background:var(--accent); color:var(--accent-ink); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+
+/* Page cards: one shared raised-paper treatment so no panel is flat by accident. */
+.node, .plate, .cmd, .swatch {
+  box-shadow:inset 0 1px 0 var(--card-hi), var(--card-sh);
+}
+
+h1,h2,h3 { font-weight:300; letter-spacing:-.02em; }
+.display { font-weight:200; letter-spacing:-.03em; line-height:1.02; }
+
+/* ============ NAV ============ */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  background:color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter:blur(18px) saturate(1.1); -webkit-backdrop-filter:blur(18px) saturate(1.1);
+  border-bottom:1px solid var(--hairline);
+}
+nav .wrap { display:flex; align-items:center; justify-content:space-between; height:56px; }
+.wordmark { display:flex; align-items:baseline; gap:10px; }
+.wordmark .se { font-weight:500; font-size:14px; letter-spacing:.02em; color:var(--text); }
+.wordmark .ptag { font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.28em; color:var(--accent); }
+.navlinks { display:flex; gap:26px; }
+.navlinks a {
+  position:relative; font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.2em;
+  color:var(--muted); transition:color .16s ease;
+}
+/* 44px keyboard/touch target without changing the optical size of the link */
+.navlinks a::before { content:""; position:absolute; left:0; right:0; top:50%; height:44px; transform:translateY(-50%); }
+.navlinks a::after {
+  content:""; position:absolute; left:0; right:.2em; bottom:-6px; height:1px;
+  background:var(--accent); transform:scaleX(0); transform-origin:left;
+  transition:transform .16s ease;
+}
+.navlinks a:hover { color:var(--text); }
+.navlinks a:hover::after { transform:scaleX(1); }
+.mac-live { display:flex; align-items:center; gap:7px; font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.2em; color:var(--muted); }
+.mode-toggle {
+  position:relative;
+  font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.2em;
+  color:var(--muted); background:var(--panel); border:1px solid var(--hairline2);
+  border-radius:8px; padding:8px 12px; cursor:pointer;
+  box-shadow:inset 0 1px 0 var(--card-hi);
+  transition:color .16s ease, border-color .16s ease, background-color .16s ease;
+}
+.mode-toggle::before { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:100%; min-width:44px; height:44px; }
+.mode-toggle:hover { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 45%, var(--hairline2)); }
+.mode-toggle:active { background:var(--bg2); }
+@media (max-width:820px){
+  .navlinks { display:none; }
+  .mac-live { display:none; }
+}
+
+/* ============ LED ============
+   A lit indicator is a lens, not a dot: hotspot toward the light, saturated body,
+   a hair of rim darkening, then the bloom. Dark = same lens, unlit. */
+.led {
+  width:6px; height:6px; border-radius:50%; flex:none; position:relative;
+  background:radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--faint) 45%, #fff), var(--faint) 78%);
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb, var(--faint) 55%, #000);
+}
+.led.on {
+  background:radial-gradient(circle at 34% 28%, #fff 0 14%, color-mix(in srgb, var(--accent) 55%, #fff) 34%, var(--accent) 80%);
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb, var(--accent) 55%, #000), 0 0 2px var(--accent), 0 0 7px -1px var(--accent);
+}
+.led.amber {
+  background:radial-gradient(circle at 34% 28%, #fff 0 14%, color-mix(in srgb, var(--amber) 55%, #fff) 34%, var(--amber) 80%);
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb, var(--amber) 55%, #000), 0 0 2px var(--amber), 0 0 7px -1px var(--amber);
+}
+.led.red {
+  background:radial-gradient(circle at 34% 28%, #fff 0 14%, color-mix(in srgb, var(--red) 55%, #fff) 34%, var(--red) 80%);
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb, var(--red) 55%, #000), 0 0 2px var(--red), 0 0 7px -1px var(--red);
+}
+.led.breathe { animation:breathe 2.8s ease-in-out infinite; }
+@keyframes breathe { 0%,100%{opacity:1} 50%{opacity:.42} }
+
+/* ============ HERO ============ */
+.hero {
+  position:relative; min-height:100vh; display:flex; align-items:center;
+  padding:128px 0 108px; overflow:hidden; color:var(--text);
+  background:var(--bg);
+}
+.hero .wrap {
+  position:relative; z-index:1; display:grid;
+  grid-template-columns:minmax(300px,.84fr) minmax(0,1.16fr);
+  gap:48px 40px; align-items:center; width:100%;
+}
+@media (max-width:980px){
+  .hero { padding:108px 0 72px; }
+  .hero .wrap { grid-template-columns:1fr; gap:56px; }
+}
+.hero-meta {
+  margin-bottom:22px; letter-spacing:.22em; color:var(--accent);
+}
+.hero h1 {
+  font-size:clamp(32px,3.7vw,48px); font-weight:200;
+  letter-spacing:-.036em; line-height:1.08;
+  margin:0 0 22px; color:var(--text);
+}
+.hero h1 em { font-style:italic; font-weight:200; color:inherit; }
+.hero .sub {
+  font-size:17px; font-weight:300; line-height:1.65;
+  color:var(--muted); max-width:26rem; margin-bottom:34px;
+}
+
+/* transport-key CTAs */
+.keys { display:flex; gap:12px; flex-wrap:wrap; }
+.key {
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  padding:15px 22px; border-radius:12px; cursor:pointer; border:1px solid transparent;
+  transition:transform .09s ease, box-shadow .16s ease, filter .16s ease;
+}
+.key.solid {
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff), color-mix(in srgb, var(--accent) 78%, #000));
+  color:var(--accent-ink); font-weight:700;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 -3px 0 rgba(0,0,0,.26), 0 6px 16px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.key.solid:hover { filter:brightness(1.04); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.26), 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.key.ghost {
+  border-color:var(--pad-edge); color:var(--pad-text);
+  background:linear-gradient(180deg, var(--pad-hi), var(--pad-lo));
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -3px 0 var(--bev-lo);
+}
+.key.ghost:hover { border-color:color-mix(in srgb, var(--accent) 50%, var(--pad-edge)); box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -3px 0 var(--bev-lo), 0 6px 16px -10px var(--floor); }
+.key:active { transform:translateY(2px); box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -1px 0 var(--bev-lo); }
+.key.solid:active { box-shadow:inset 0 1px 0 rgba(255,255,255,.3), inset 0 -1px 0 rgba(0,0,0,.26); }
+.hero .aside { font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.2em; color:var(--faint); margin-top:22px; }
+
+/* ============ THE UNIT (CSS instrument) ============ */
+.plinth { perspective:1600px; position:relative; margin-right:-5vw; }
+.plinth::after {
+  content:""; position:absolute; z-index:0; pointer-events:none;
+  left:14%; right:10%; bottom:-18px; height:40px;
+  background:radial-gradient(ellipse, rgba(40,58,70,.18), transparent 72%);
+  filter:blur(8px);
+}
+@media (max-width:980px){
+  .plinth { margin-right:0; }
+  .hero .unit { transform:none; }
+}
+.unit {
+  position:relative; z-index:1;
+  background:linear-gradient(180deg, var(--slab-hi), var(--slab-lo) 65%);
+  border:1px solid var(--slab-edge);
+  border-radius:26px;
+  padding:20px 20px 16px;
+  box-shadow:
+    inset 0 1px 0 var(--bev-hi),
+    inset 0 -2px 0 var(--bev-lo),
+    inset 0 -14px 24px -18px var(--bev-lo),
+    0 30px 50px -28px rgba(0,0,0,.55),
+    0 70px 120px -40px rgba(0,0,0,.7);
+  transform:rotateX(var(--tilt,8deg)) rotateY(-5.5deg) rotateZ(.35deg);
+  transform-style:preserve-3d;
+  transition:transform .1s linear;
+}
+/* Hardware takes the finish: black screwheads on a porcelain slab read as dirt. */
+.screw { position:absolute; width:11px; height:11px; border-radius:50%;
+  background:conic-gradient(from 40deg, var(--metal-a), var(--metal-b) 30%, var(--metal-a) 55%, var(--metal-b) 80%, var(--metal-a));
+  box-shadow:
+    inset 0 .5px .5px color-mix(in srgb, var(--metal-a) 55%, #fff),
+    0 0 0 1.5px color-mix(in srgb, var(--slab-lo) 88%, var(--metal-b)),
+    0 0 0 2px var(--bev-lo),
+    0 1px 2px var(--bev-lo);
+}
+.screw::after { content:""; position:absolute; left:1.5px; right:1.5px; top:50%; height:1.4px; border-radius:1px;
+  background:color-mix(in srgb, var(--metal-b) 78%, #000); transform:rotate(38deg); }
+.screw.tl{top:9px;left:9px} .screw.tr{top:9px;right:9px} .screw.bl{bottom:9px;left:9px} .screw.br{bottom:9px;right:9px}
+
+/* Engraved seam: a scored line plus the light catching its lower lip. */
+.unit-head {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:2px 8px 13px;
+  border-bottom:1px solid color-mix(in srgb, var(--slab-edge) 88%, transparent);
+  box-shadow:0 1px 0 var(--bev-hi);
+  margin-bottom:16px;
+}
+.unit-head .label:last-child { text-align:right; margin-right:-.22em; }
+/* engraved plate labels stay on their original tight metric — the 1.7 leading above
+   is for page labels that wrap, and would otherwise drift the callout positions */
+.unit .label { line-height:1.2; }
+.unit-body { display:grid; grid-template-columns:110px 1fr; gap:16px; }
+@media (max-width:820px){ .unit-body { grid-template-columns:1fr; } .unit-side { flex-direction:row !important; justify-content:space-between; } }
+.unit-side { display:flex; flex-direction:column; align-items:center; gap:14px; padding:6px 0; }
+
+/* encoder */
+.encoder { position:relative; width:72px; height:72px; flex:none; }
+.encoder .ring { position:absolute; inset:0; border-radius:50%;
+  background:conic-gradient(from 0deg, #333d45 0deg 5deg, #171d22 5deg 10deg, #333d45 10deg 15deg, #171d22 15deg 20deg, #333d45 20deg 25deg, #171d22 25deg 30deg, #333d45 30deg 35deg, #171d22 35deg 40deg, #333d45 40deg 45deg, #171d22 45deg 50deg, #333d45 50deg 55deg, #171d22 55deg 60deg, #333d45 60deg 65deg, #171d22 65deg 70deg, #333d45 70deg 75deg, #171d22 75deg 80deg, #333d45 80deg 85deg, #171d22 85deg 90deg, #333d45 90deg 95deg, #171d22 95deg 100deg, #333d45 100deg 105deg, #171d22 105deg 110deg, #333d45 110deg 115deg, #171d22 115deg 120deg, #333d45 120deg 125deg, #171d22 125deg 130deg, #333d45 130deg 135deg, #171d22 135deg 140deg, #333d45 140deg 145deg, #171d22 145deg 150deg, #333d45 150deg 155deg, #171d22 155deg 160deg, #333d45 160deg 165deg, #171d22 165deg 170deg, #333d45 170deg 175deg, #171d22 175deg 180deg, #333d45 180deg 185deg, #171d22 185deg 190deg, #333d45 190deg 195deg, #171d22 195deg 200deg, #333d45 200deg 205deg, #171d22 205deg 210deg, #333d45 210deg 215deg, #171d22 215deg 220deg, #333d45 220deg 225deg, #171d22 225deg 230deg, #333d45 230deg 235deg, #171d22 235deg 240deg, #333d45 240deg 245deg, #171d22 245deg 250deg, #333d45 250deg 255deg, #171d22 255deg 260deg, #333d45 260deg 265deg, #171d22 265deg 270deg, #333d45 270deg 275deg, #171d22 275deg 280deg, #333d45 280deg 285deg, #171d22 285deg 290deg, #333d45 290deg 295deg, #171d22 295deg 300deg, #333d45 300deg 305deg, #171d22 305deg 310deg, #333d45 310deg 315deg, #171d22 315deg 320deg, #333d45 320deg 325deg, #171d22 325deg 330deg, #333d45 330deg 335deg, #171d22 335deg 340deg, #333d45 340deg 345deg, #171d22 345deg 350deg, #333d45 350deg 355deg, #171d22 355deg 360deg);
+  box-shadow:0 4px 10px -2px var(--bev-lo), 0 1px 0 var(--bev-hi), inset 0 1px 1px rgba(255,255,255,.14), inset 0 -1px 1px rgba(0,0,0,.5);
+}
+.encoder .face { position:absolute; inset:12px; border-radius:50%; overflow:hidden;
+  background:radial-gradient(circle at 36% 30%, #3d474f, #13181c 68%);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.5), inset 0 -1px 1px rgba(255,255,255,.08);
+}
+/* one specular sweep — the knob reads as turned metal rather than a flat disc */
+.encoder .face::before { content:""; position:absolute; inset:0; border-radius:50%;
+  background:linear-gradient(148deg, rgba(255,255,255,.20), rgba(255,255,255,.04) 38%, transparent 58%); }
+.encoder .face::after { content:""; position:absolute; top:5px; left:50%; width:3px; height:11px; margin-left:-1.5px; border-radius:2px; background:var(--accent); box-shadow:0 0 5px var(--accent), 0 0 1px #fff; }
+
+/* grille */
+.grille { width:86px; height:56px; border-radius:10px; flex:none;
+  background-image:radial-gradient(color-mix(in srgb, var(--pad-text) 45%, transparent) 1.1px, transparent 1.5px);
+  background-size:7px 7px; background-position:center;
+  background-color:color-mix(in srgb, var(--pad-lo) 82%, var(--slab-lo));
+  border:1px solid var(--pad-edge);
+  box-shadow:inset 0 2px 5px var(--bev-lo), 0 1px 0 var(--bev-hi);
+  opacity:.78;
+}
+
+.side-leds { display:flex; flex-direction:column; gap:9px; }
+.side-leds .row { display:flex; align-items:center; gap:7px; }
+
+/* pads — four states, told by SURFACE first and colour second:
+   live = raised + accent rim + lit meter · idle = raised, neutral meter
+   queued = raised, amber meter + amber state · unassigned = recessed, empty well */
+.pads { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; }
+.pad {
+  position:relative; min-height:104px; min-width:0; border-radius:12px;
+  background:linear-gradient(180deg, var(--pad-hi), var(--pad-lo));
+  border:1px solid var(--pad-edge);
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -4px 7px -2px var(--bev-lo), 0 2px 4px -1px var(--bev-lo);
+  padding:10px 11px 9px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  color:var(--pad-text);
+  transition:transform .09s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.pad:hover { border-color:color-mix(in srgb, var(--pad-edge) 55%, var(--text)); }
+.pad:active { transform:translateY(1px); box-shadow:inset 0 1px 3px var(--bev-lo); }
+.pad .num { font-family:ui-monospace,Menlo,monospace; font-size:9px; color:var(--faint); letter-spacing:.14em; }
+.pad .proj { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; font-weight:700; letter-spacing:.01em; margin-top:5px; }
+.pad .branch { font-family:ui-monospace,Menlo,monospace; font-size:9px; color:var(--faint); margin-top:3px; letter-spacing:.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pad .snip { font-size:10px; line-height:1.45; color:var(--muted); margin-top:7px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.pad .foot { display:flex; align-items:center; justify-content:space-between; margin-top:9px; }
+.pad .state {
+  font-family:ui-monospace,Menlo,monospace; font-size:8px; letter-spacing:.18em; color:var(--faint);
+  display:flex; align-items:center; gap:5px; white-space:nowrap; margin-right:-.18em;
+}
+.pad .state.live { color:var(--accent); }
+.pad .state.queued { color:var(--amber); }
+.pad.active {
+  border-color:color-mix(in srgb, var(--accent) 62%, var(--pad-edge));
+  background:linear-gradient(180deg, color-mix(in srgb, var(--pad-hi) 97%, var(--accent)), color-mix(in srgb, var(--pad-lo) 93%, var(--accent)));
+  box-shadow:
+    inset 0 1px 0 var(--bev-hi),
+    inset 0 -4px 7px -2px var(--bev-lo),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 0 18px -4px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* unassigned reads as an unpopulated well: recessed, no top light, no drop shadow */
+.pad.empty {
+  background:linear-gradient(180deg, color-mix(in srgb, var(--pad-lo) 86%, var(--slab-lo)), color-mix(in srgb, var(--pad-lo) 96%, var(--slab-hi)));
+  border-color:color-mix(in srgb, var(--pad-edge) 62%, transparent);
+  box-shadow:inset 0 2px 5px -1px var(--bev-lo), inset 0 -1px 0 var(--bev-hi);
+  color:var(--faint);
+}
+.pad.empty:hover { border-color:color-mix(in srgb, var(--pad-edge) 90%, transparent); }
+.pad.empty:active { transform:none; }
+.pad.empty .proj { color:var(--faint); font-weight:400; }
+.pad.empty .state { opacity:.72; }
+
+/* waveform (pure CSS bars) — colour carries the state, opacity carries the level */
+.wave { height:14px; flex:1; max-width:72px; margin-right:10px;
+  background:repeating-linear-gradient(90deg,
+    var(--accent) 0 2px, transparent 2px 5px);
+  -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 28%, #000 72%, transparent 100%);
+  mask-image:linear-gradient(180deg, transparent 0%, #000 28%, #000 72%, transparent 100%);
+  opacity:.72;
+}
+.wave.dimmer { background:repeating-linear-gradient(90deg, var(--faint) 0 2px, transparent 2px 5px); opacity:.5; }
+.wave.amber { background:repeating-linear-gradient(90deg, var(--amber) 0 2px, transparent 2px 5px); opacity:.6; }
+.wave.play { animation:wavepulse 1.6s ease-in-out infinite; }
+@keyframes wavepulse { 0%,100%{opacity:.66} 50%{opacity:1} }
+
+/* speak bar + transport */
+.unit-bottom { display:grid; grid-template-columns:1fr auto; gap:11px; margin-top:14px; }
+.speakbar {
+  position:relative; border-radius:14px; padding:18px 20px;
+  display:flex; align-items:center; gap:14px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 94%, #fff), color-mix(in srgb, var(--accent) 72%, #000));
+  color:var(--accent-ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.45),
+    inset 0 -4px 0 rgba(0,0,0,.25),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, #000),
+    0 8px 22px -8px color-mix(in srgb, var(--accent) 50%, transparent);
+  cursor:pointer; user-select:none;
+  transition:filter .14s ease, transform .09s ease;
+}
+.speakbar:hover { filter:brightness(1.04); }
+.speakbar:active { filter:brightness(.92); transform:translateY(1px); }
+.speakbar .mic { width:26px; height:26px; border-radius:50%; background:var(--accent-ink); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-size:12px; flex:none;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.14), 0 1px 0 rgba(255,255,255,.28); }
+.speakbar .t { font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:13px; letter-spacing:.24em; white-space:nowrap; }
+.speakbar .s { font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.16em; opacity:.7; margin-left:auto; margin-right:-.16em; white-space:nowrap; }
+.transport { display:flex; gap:8px; }
+.tkey {
+  min-width:62px; border-radius:12px; padding:0 10px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  background:linear-gradient(180deg, var(--pad-hi), var(--pad-lo));
+  border:1px solid var(--pad-edge);
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -3px 0 var(--bev-lo), 0 2px 4px -1px var(--bev-lo);
+  font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.16em; color:var(--pad-text);
+  cursor:pointer; transition:transform .09s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.tkey small { font-size:8px; letter-spacing:.1em; color:var(--faint); }
+.tkey.stop { color:var(--red); }
+.tkey:hover { border-color:color-mix(in srgb, var(--pad-edge) 55%, var(--text)); }
+.tkey:active { transform:translateY(2px); box-shadow:inset 0 1px 3px var(--bev-lo), inset 0 -1px 0 var(--bev-hi); }
+@media (max-width:820px){ .unit-bottom { grid-template-columns:1fr; } .transport { justify-content:space-between; } .tkey{flex:1; padding:12px 6px; min-width:0;} .speakbar .s{ display:none; } .speak-sec .bigbar{ padding:24px 22px; } }
+
+/* ============ SECTION FURNITURE ============
+   One vertical rhythm everywhere: eyebrow →18px→ headline →20px→ body →26px→ detail. */
+.sec { padding:132px 0; }
+.sec-head { margin-bottom:64px; max-width:640px; }
+.sec-head.roomy { margin-bottom:88px; } /* heads that lost a line keep their vertical mass */
+.sec-head h2 { font-size:clamp(32px,4vw,52px); margin-top:18px; }
+.sec-head p { margin-top:20px; font-size:16px; font-weight:300; line-height:1.65; color:var(--muted); }
+
+/* ============ ARGUMENT ============ */
+.argument { text-align:left; padding-top:108px; padding-bottom:120px; }
+.argument h2 { font-size:clamp(40px,6vw,84px); font-weight:200; letter-spacing:-.034em; line-height:1.04; }
+.argument h2 .dim { color:var(--faint); }
+.argument h2 .acc { color:var(--accent); }
+.argument .kicker { margin-top:32px; }
+
+/* ============ LANE CLOSE-UP ============ */
+.lanegrid { display:grid; grid-template-columns:1fr 1fr; gap:70px; align-items:center; }
+@media (max-width:900px){ .lanegrid { grid-template-columns:1fr; gap:48px; } }
+.bigpad {
+  border-radius:22px; padding:26px;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--pad-hi) 97%, var(--accent)), color-mix(in srgb, var(--pad-lo) 93%, var(--accent)));
+  border:1px solid color-mix(in srgb, var(--accent) 55%, var(--pad-edge));
+  box-shadow:
+    inset 0 1px 0 var(--bev-hi),
+    inset 0 -8px 14px -4px var(--bev-lo),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 24px 50px -18px var(--floor),
+    0 0 30px -8px color-mix(in srgb, var(--accent) 30%, transparent);
+  color:var(--pad-text);
+}
+.bigpad .num { font-family:ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:.2em; color:var(--accent); }
+.bigpad .proj { font-family:ui-monospace,Menlo,monospace; font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:12px; }
+.bigpad .branch { font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--faint); margin-top:5px; }
+.bigpad .snip { font-size:14px; line-height:1.55; color:var(--muted); margin-top:18px; font-weight:300; }
+.bigpad .divider { height:1px; background:var(--pad-edge); box-shadow:0 1px 0 var(--bev-hi); margin:20px 0; }
+.bigpad .meta { display:flex; justify-content:space-between; align-items:center; }
+.bigpad .wave { height:18px; max-width:150px; }
+.checklist { list-style:none; margin-top:28px; }
+.checklist li { display:flex; gap:14px; padding:14px 0; border-top:1px solid var(--hairline); font-size:14px; font-weight:300; line-height:1.55; color:var(--muted); align-items:baseline; }
+.checklist li b { font-weight:500; color:var(--text); }
+.checklist .tick { font-family:ui-monospace,Menlo,monospace; font-size:10px; color:var(--accent); letter-spacing:.14em; flex:none; }
+
+/* micro deck */
+.microdeck { margin-top:70px; display:grid; grid-template-columns:auto 1fr; gap:56px; align-items:center; }
+@media (max-width:900px){ .microdeck { grid-template-columns:1fr; } }
+.md-grid { display:grid; grid-template-columns:repeat(4,minmax(0,74px)); gap:9px; padding:16px; border-radius:22px;
+  background:linear-gradient(180deg, var(--slab-hi), var(--slab-lo)); border:1px solid var(--slab-edge);
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 0 var(--bev-lo), 0 24px 50px -20px var(--floor); width:100%; max-width:364px; }
+.md-key { height:64px; border-radius:10px; background:linear-gradient(180deg, var(--pad-hi), var(--pad-lo));
+  border:1px solid var(--pad-edge); box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -3px 5px -1px var(--bev-lo), 0 1px 2px -1px var(--bev-lo);
+  display:flex; flex-direction:column; justify-content:space-between; padding:7px 8px;
+  transition:border-color .16s ease; }
+.md-key .k { font-family:ui-monospace,Menlo,monospace; font-size:8px; color:var(--faint); letter-spacing:.14em; }
+.md-key .v { font-family:ui-monospace,Menlo,monospace; font-size:9px; color:var(--pad-text); font-weight:700; letter-spacing:.01em; }
+/* an unbound key is a recessed blank, same language as an unassigned lane */
+.md-key.blank {
+  background:linear-gradient(180deg, color-mix(in srgb, var(--pad-lo) 86%, var(--slab-lo)), var(--pad-lo));
+  box-shadow:inset 0 2px 4px -1px var(--bev-lo), inset 0 -1px 0 var(--bev-hi);
+}
+.md-key.hot { border-color:color-mix(in srgb, var(--accent) 55%, var(--pad-edge));
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -3px 5px -1px var(--bev-lo), inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent), 0 0 14px -6px color-mix(in srgb, var(--accent) 50%, transparent); }
+.md-key.hot .k { color:var(--accent); }
+
+/* ============ SPEAK SECTION (full-bleed bar) ============ */
+.speak-sec { background:var(--bg2); border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline); }
+.speak-sec .bigbar { margin-top:52px; border-radius:20px; padding:34px 36px; }
+.speak-sec .bigbar .t { font-size:clamp(16px,2.4vw,22px); letter-spacing:.3em; }
+.speak-sec .bigbar .mic { width:38px; height:38px; font-size:16px; }
+.speak-sec .bigbar .s { font-size:10px; }
+.specline { display:flex; gap:10px; justify-content:center; margin-top:26px; flex-wrap:wrap; }
+.specline span { font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.2em; color:var(--muted); }
+.specline .sep { color:var(--hairline2); }
+
+/* ============ ANATOMY ============ */
+.anatomy { display:grid; grid-template-columns:1.25fr .75fr; gap:60px; align-items:center; }
+@media (max-width:980px){ .anatomy { grid-template-columns:1fr; } }
+.anatomy .unit { transform:none; box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 0 var(--bev-lo), inset 0 -14px 24px -18px var(--bev-lo), 0 30px 60px -25px var(--floor); }
+.callout { position:absolute; width:24px; height:24px; border-radius:50%; z-index:3;
+  background:var(--bg); border:1px solid var(--accent); color:var(--accent);
+  font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:0; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 12px -2px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 1px 0 var(--card-hi); }
+.legend { list-style:none; counter-reset:c; }
+.legend li { display:flex; gap:16px; padding:16px 0; border-top:1px solid var(--hairline); align-items:baseline; }
+.legend li:last-child { border-bottom:1px solid var(--hairline); }
+.legend .n { font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.1em; color:var(--accent); flex:none; width:24px; }
+.legend b { font-family:ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:.16em; font-weight:700; text-transform:uppercase; display:block; }
+.legend p { font-size:13px; color:var(--muted); font-weight:300; margin-top:6px; line-height:1.55; }
+
+/* ============ SIGNAL PATH ============ */
+.chain { display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+.node {
+  border:1px solid var(--hairline2); border-radius:12px; padding:18px 22px;
+  background:var(--panel); min-width:150px; flex:1;
+}
+.node b { font-family:ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:.2em; display:block; }
+.node span { font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.14em; color:var(--muted); display:block; margin-top:7px; }
+.node.hot { border-color:color-mix(in srgb, var(--accent) 55%, var(--hairline2));
+  box-shadow:inset 0 1px 0 var(--card-hi), inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent), var(--card-sh); }
+.node.hot b { color:var(--accent); }
+.link { display:flex; align-items:center; padding:0 10px; color:var(--faint); font-family:ui-monospace,Menlo,monospace; font-size:14px; }
+@media (max-width:900px){ .link { transform:rotate(90deg); padding:8px 0; margin:0 auto; } .chain { flex-direction:column; } }
+.truths { margin-top:56px; display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--hairline); border:1px solid var(--hairline); border-radius:12px; overflow:hidden; }
+@media (max-width:820px){ .truths { grid-template-columns:1fr; } }
+.truth { background:var(--bg); padding:26px 28px; }
+.truth b { font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.2em; color:var(--accent); display:block; }
+.truth p { font-size:13px; color:var(--muted); font-weight:300; margin-top:12px; line-height:1.6; }
+
+/* ============ PLAYER ============ */
+.playerwrap { display:grid; grid-template-columns:.8fr 1.2fr; gap:70px; align-items:center; }
+@media (max-width:900px){ .playerwrap { grid-template-columns:1fr; gap:48px; } }
+.player {
+  border-radius:22px; padding:24px;
+  background:linear-gradient(180deg, var(--slab-hi), var(--slab-lo));
+  border:1px solid var(--slab-edge);
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 0 var(--bev-lo), 0 24px 50px -20px var(--floor);
+}
+.player .ptop { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.player .ptitle { font-family:ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:.14em; color:var(--pad-text); }
+.player .ptitle span { color:var(--faint); }
+.player .pmain { display:flex; align-items:center; gap:18px; }
+.playbtn { width:52px; height:52px; border-radius:50%; flex:none; cursor:pointer;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 94%, #fff), color-mix(in srgb, var(--accent) 74%, #000));
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 -3px 0 rgba(0,0,0,.28), inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, #000), 0 8px 18px -6px color-mix(in srgb, var(--accent) 50%, transparent);
+  transition:filter .14s ease, transform .09s ease;
+}
+.playbtn:hover { filter:brightness(1.05); }
+.playbtn:active { transform:translateY(1px); filter:brightness(.94); }
+.playbtn .tri { width:0; height:0; border-left:14px solid var(--accent-ink); border-top:9px solid transparent; border-bottom:9px solid transparent; margin-left:3px; }
+.player .scrub { flex:1; }
+.player .scrub .wave { height:34px; max-width:none; width:100%; }
+.player .ptime { display:flex; justify-content:space-between; margin-top:9px; font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.14em; color:var(--faint); }
+.player .ptime span:last-child { margin-right:-.14em; }
+.player .pctl { display:flex; gap:8px; margin-top:22px; flex-wrap:wrap; }
+.pchip { position:relative; font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.14em; color:var(--pad-text);
+  border:1px solid var(--pad-edge); border-radius:8px; padding:8px 12px;
+  background:linear-gradient(180deg, var(--pad-hi), var(--pad-lo));
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 0 var(--bev-lo); cursor:pointer;
+  transition:border-color .16s ease, color .16s ease, transform .09s ease; }
+.pchip::before { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:100%; min-width:44px; height:44px; }
+.pchip:hover { border-color:color-mix(in srgb, var(--pad-edge) 55%, var(--text)); }
+.pchip:active { transform:translateY(1px); box-shadow:inset 0 1px 2px var(--bev-lo); }
+.pchip.on { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 55%, var(--pad-edge));
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 0 var(--bev-lo), inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* ============ THEMES ============ */
+.swatches { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+@media (max-width:900px){ .swatches { grid-template-columns:repeat(2,1fr); } }
+.swatch { border:1px solid var(--hairline2); border-radius:16px; overflow:hidden; cursor:pointer; background:var(--panel);
+  transition:transform .14s ease, border-color .16s ease, box-shadow .16s ease; }
+.swatch:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 45%, var(--hairline2));
+  box-shadow:inset 0 1px 0 var(--card-hi), 0 14px 30px -20px var(--floor); }
+.swatch.current { border-color:var(--accent);
+  box-shadow:inset 0 1px 0 var(--card-hi), inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), var(--card-sh); }
+.swatch .prev { padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:7px; background:linear-gradient(180deg, var(--slab-hi), var(--slab-lo)); }
+.swatch .mini { height:34px; border-radius:7px; border:1px solid var(--pad-edge);
+  background:linear-gradient(180deg, var(--pad-hi), var(--pad-lo));
+  box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 3px -1px var(--bev-lo); position:relative; }
+.swatch .mini::after { content:""; position:absolute; top:5px; left:6px; width:4px; height:4px; border-radius:50%;
+  background:radial-gradient(circle at 34% 28%, #fff 0 18%, var(--accent) 80%); box-shadow:0 0 4px var(--accent); }
+.swatch .swlabel { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 14px; border-top:1px solid var(--hairline);
+  font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; }
+.swatch .swlabel > :last-child { margin-right:-.2em; }
+.swatch .swlabel .tag { color:var(--accent); font-size:8px; }
+
+/* ============ SPEC PLATE / INSTALL ============ */
+.plate {
+  border:1px solid var(--hairline2); border-radius:18px; padding:44px;
+  background:var(--panel); position:relative;
+}
+.plate::before { content:""; position:absolute; inset:8px; border:1px solid var(--hairline); border-radius:12px; pointer-events:none;
+  box-shadow:inset 0 1px 0 var(--card-hi); }
+.plate h3 { font-family:ui-monospace,Menlo,monospace; font-size:12px; letter-spacing:.3em; color:var(--accent); font-weight:700; }
+.plate p { font-size:15px; font-weight:300; line-height:1.7; color:var(--muted); margin-top:20px; max-width:640px; }
+.plate p b { color:var(--text); font-weight:500; }
+.plate .fine { font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.08em; color:var(--faint); margin-top:26px; line-height:1.8; max-width:760px; }
+
+.install { text-align:center; }
+.cmd {
+  display:inline-flex; align-items:center; gap:16px; margin:38px auto 0;
+  border:1px solid var(--hairline2); border-radius:12px; padding:14px 16px 14px 24px;
+  background:var(--panel); font-family:ui-monospace,Menlo,monospace; font-size:15px; letter-spacing:.04em;
+}
+.cmd .prompt { color:var(--accent); }
+.cmd .copy { position:relative; font-size:9px; letter-spacing:.2em; color:var(--muted); border:1px solid var(--hairline2); border-radius:8px;
+  padding:8px 11px; cursor:pointer; transition:color .16s ease, border-color .16s ease, background-color .16s ease; }
+.cmd .copy::before { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:100%; min-width:44px; height:44px; }
+.cmd .copy:hover { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 60%, var(--hairline2)); }
+.cmd .copy:active { background:var(--bg2); }
+.steps { display:flex; justify-content:center; gap:12px; align-items:center; margin-top:32px; flex-wrap:wrap;
+  font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.22em; color:var(--muted); }
+.steps .arrow { color:var(--faint); letter-spacing:0; }
+.install .key { margin-top:46px; }
+
+/* Two steps, side by side: the Mac half and the iPad half. They are peers —
+   neither is an upgrade of the other, so they get identical cards. */
+.twostep { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; margin-top:46px; text-align:left; }
+@media (max-width:820px) { .twostep { grid-template-columns:1fr; } }
+.step {
+  border:1px solid var(--hairline2); border-radius:16px; padding:30px 30px 32px; background:var(--panel);
+  box-shadow:inset 0 1px 0 var(--bev-hi), 0 10px 26px -22px var(--floor);
+  display:flex; flex-direction:column;
+}
+.step .n { font-family:ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:.28em; color:var(--accent); font-weight:700; }
+.step h3 { font-size:21px; font-weight:400; letter-spacing:-.01em; margin-top:14px; color:var(--text); }
+.step p { font-size:14.5px; font-weight:300; line-height:1.7; color:var(--muted); margin-top:12px; flex:1; }
+.step .cmd { display:flex; margin:22px 0 0; font-size:13.5px; padding:12px 12px 12px 18px; gap:12px; }
+.step .cmd span:nth-child(2) { flex:1; overflow-x:auto; white-space:nowrap; }
+
+/* An instruction you hand to your agent, not a command you type. It reads as
+   speech, so it is set in the body face rather than mono — the mono blocks on
+   this page are all things a machine parses. */
+.ask { margin-top:22px; border:1px solid var(--hairline2); border-radius:12px; background:var(--panel); overflow:hidden; }
+.ask .head { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:9px 12px 9px 16px; border-bottom:1px solid var(--hairline2); }
+.ask .head .label { font-family:ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:.2em; color:var(--faint); }
+.ask .copy { position:relative; font-size:9px; letter-spacing:.2em; color:var(--muted);
+  border:1px solid var(--hairline2); border-radius:8px; padding:7px 10px; cursor:pointer; background:none;
+  transition:color .16s ease, border-color .16s ease, background-color .16s ease; }
+.ask .copy::before { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:100%; min-width:44px; height:44px; }
+.ask .copy:hover { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 60%, var(--hairline2)); }
+.ask .copy:active { background:var(--bg2); }
+.ask .body { padding:16px; font-size:14px; font-weight:300; line-height:1.65; color:var(--text); }
+.step .orelse { font-size:12.5px; font-weight:300; line-height:1.6; color:var(--faint); margin-top:14px; }
+.step .orelse code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; letter-spacing:.02em; color:var(--muted); }
+
+/* Interest, not a waiting list. One field, no promises about position or date. */
+.interest { display:flex; gap:10px; margin-top:22px; flex-wrap:wrap; }
+.interest input {
+  flex:1; min-width:0; font-family:inherit; font-size:14px; font-weight:300; color:var(--text);
+  background:var(--panel); border:1px solid var(--hairline2); border-radius:12px; padding:14px 16px;
+  transition:border-color .16s ease;
+}
+.interest input::placeholder { color:var(--faint); }
+.interest input:focus { outline:none; border-color:color-mix(in srgb, var(--accent) 60%, var(--hairline2)); }
+.interest input:disabled { opacity:.55; }
+.interest .key { padding:14px 18px; border:none; }
+.interest .key:disabled { cursor:default; filter:saturate(.4) brightness(.98); }
+.interest-note { font-size:12.5px; font-weight:300; line-height:1.6; margin-top:12px; min-height:1.2em; color:var(--muted); }
+.interest-note.bad { color:#B3261E; }
+@media (max-width:520px) { .interest { flex-direction:column; } .interest .key { justify-content:center; } }
+.step .key { margin-top:22px; align-self:flex-start; }
+.step .foot { font-family:ui-monospace,Menlo,monospace; font-size:9.5px; letter-spacing:.16em; color:var(--faint); margin-top:16px; }
+.step .foot a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
+.step .foot a:hover { color:var(--ink); }
+
+footer { border-top:1px solid var(--hairline); padding:44px 0 60px; }
+footer .wrap { display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+footer .label { line-height:2; }
+footer .wrap > div:last-child { margin-right:-.22em; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation:none !important; transition:none !important; }
+  .unit { transform:none !important; }
+}
+
+/* Studio presentation: generous type, a full instrument, and quiet material contrast. */
+:root[data-mode="light"] {
+  --bg:#F8F7F4; --bg2:#F0EFEB; --panel:#FFFDF9;
+  --hairline:#E1E1DB; --hairline2:#CFD3CD;
+  --text:#242E2B; --muted:#65706A; --faint:#778179;
+  --accent:#326C60; --accent-ink:#F7FCF9;
+}
+body { font-family:var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif; }
+.wrap { max-width:1240px; padding-inline:40px; }
+section[id] { scroll-margin-top:88px; }
+nav .wrap { height:72px; }
+.wordmark .se { font-size:17px; font-weight:600; letter-spacing:-.045em; }
+.wordmark .ptag { padding-left:13px; border-left:1px solid var(--hairline2); font-size:9px; letter-spacing:.18em; }
+.navlinks { gap:22px; }
+.navlinks a { font-size:9px; letter-spacing:.13em; }
+.mode-toggle { border-radius:30px; font-size:9px; padding:9px 13px; background:transparent; }
+.mac-live { font-size:8px; letter-spacing:.13em; }
+.hero {
+  min-height:0; padding:142px 0 68px;
+  background:radial-gradient(ellipse at 50% 62%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 64%), var(--bg);
+}
+.hero .wrap { grid-template-columns:minmax(0,1fr); gap:56px; }
+.hero .wrap > div:first-child { text-align:center; }
+.hero-meta { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:26px; font-size:9px; letter-spacing:.18em; }
+.hero-signal { width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent); }
+.meta-divider { color:var(--hairline2); margin-inline:4px; }
+.hero h1 { font-size:clamp(48px,6.5vw,88px); font-weight:450; letter-spacing:-.065em; line-height:1.02; margin-bottom:24px; }
+.hero h1 em { font-family:Georgia, 'Times New Roman', serif; font-weight:400; letter-spacing:-.065em; color:var(--accent); }
+.hero .sub { max-width:540px; margin:0 auto 26px; font-size:17px; line-height:1.7; font-weight:400; letter-spacing:-.025em; }
+.hero .keys { justify-content:center; gap:12px; }
+.hero .key { min-height:48px; padding:14px 22px; border-radius:9px; font-size:10px; letter-spacing:.12em; gap:20px; }
+.hero .key.solid { background:var(--accent); box-shadow:inset 0 1px 0 #ffffff20, 0 3px 5px #122b2010; }
+.hero .key.ghost { background:transparent; color:var(--text); border-color:var(--hairline2); box-shadow:0 1px 2px #122b2005; }
+.hero .key:hover { transform:translateY(-2px); }
+.hero .aside { margin-top:20px; font-size:8px; letter-spacing:.15em; }
+.hero .aside span { margin-inline:9px; }
+.plinth { width:100%; max-width:860px; margin:0 auto; perspective:2200px; }
+.stage-label { display:flex; justify-content:space-between; padding:0 12px; margin-bottom:24px; font-size:8px; letter-spacing:.15em; }
+.hero .unit { width:100%; transform:rotateX(var(--tilt,8deg)) rotateY(-2deg); box-shadow:inset 0 1px 0 var(--bev-hi), inset 0 -2px 0 var(--bev-lo), 0 12px 14px -12px var(--floor), 0 34px 54px -26px var(--floor), 0 65px 90px -45px var(--floor); }
+.hero .unit-body { grid-template-columns:92px minmax(0,1fr); }
+.hero .pads { grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.hero .pad { min-height:122px; padding:12px 14px; }
+.hero .unit-bottom { grid-template-columns:minmax(0,1fr) auto; }
+.hero .speakbar { padding:17px 18px; gap:12px; min-width:0; }
+.hero .speakbar .t { font-size:11px; letter-spacing:.18em; }
+.hero .speakbar .s { font-size:7px; letter-spacing:.06em; white-space:normal; max-width:105px; }
+.hero .tkey { min-width:48px; padding-inline:8px; }
+.spec-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding-top:30px; padding-bottom:38px; gap:30px; }
+.spec-strip > div { display:flex; align-items:center; gap:18px; justify-content:center; }
+.spec-strip > div + div { border-left:1px solid var(--hairline); }
+.spec-number, .spec-symbol { font-size:32px; letter-spacing:-.06em; font-weight:300; color:var(--accent); }
+.spec-copy { display:flex; flex-direction:column; gap:5px; }
+.spec-copy b { font-size:11px; font-weight:500; letter-spacing:-.015em; }
+.spec-copy > span { font-size:10px; color:var(--muted); }
+.sec { padding-block:108px; }
+.display { font-weight:350; letter-spacing:-.045em; }
+.argument { background:var(--bg2); }
+.argument h2 { font-weight:350; font-size:clamp(36px,5.4vw,70px); letter-spacing:-.05em; line-height:1.1; }
+.argument h2 .dim { color:var(--muted); }
+.argument h2 .acc { font-family:Georgia, 'Times New Roman', serif; font-style:italic; font-weight:400; }
+.sec-head .label, .lanegrid > div > .label { font-size:9px; }
+.plate, .step { border-radius:20px; }
+.swatch { border-radius:16px; }
+@media (max-width:1100px) { .navlinks { gap:16px; } .mac-live { display:none; } }
+@media (max-width:820px) {
+  .wrap { padding-inline:24px; }
+  nav .wrap { height:64px; }
+  .hero { padding:112px 0 44px; }
+  .hero .wrap { gap:44px; }
+  .hero .unit-body { grid-template-columns:minmax(0,1fr); }
+  .hero .unit-side { flex-direction:row; padding:0 6px 10px; }
+  .hero .encoder { width:44px; height:44px; }
+  .hero .encoder .face { inset:8px; }
+  .hero .grille { width:72px; height:36px; }
+  .hero .side-leds { flex-direction:row; gap:14px; }
+  .hero .unit-bottom { grid-template-columns:minmax(0,1fr); }
+  .hero .tkey { padding:10px; }
+  .hero .speakbar { justify-content:center; }
+  .spec-strip { gap:20px; padding-bottom:32px; }
+  .spec-strip > div { flex-direction:column; align-items:flex-start; gap:10px; padding-left:16px; }
+  .spec-copy { gap:7px; }
+  .spec-copy b, .spec-copy > span { line-height:1.5; }
+}
+@media (max-width:520px) {
+  .wrap { padding-inline:20px; }
+  .hero h1 { font-size:clamp(44px,11vw,57px); }
+  .hero .sub { font-size:15px; }
+  .hero-meta { font-size:8px; gap:7px; letter-spacing:.1em; }
+  .hero .key { padding:13px 16px; font-size:9px; gap:10px; }
+  .stage-label { font-size:7px; padding:0; letter-spacing:.06em; }
+  .hero .unit { padding:17px 11px 13px; border-radius:20px; transform:none; }
+  .hero .unit-head { padding-inline:4px; }
+  .hero .unit-head .label { font-size:7px; letter-spacing:.1em; }
+  .hero .unit-side > .label, .hero .grille { display:none; }
+  .hero .side-leds { gap:12px; }
+  .hero .side-leds .label { font-size:7px; }
+  .hero .pads { gap:7px; }
+  .hero .pad { padding:8px 7px; min-height:114px; border-radius:9px; }
+  .hero .pad .proj { font-size:9px; overflow:hidden; text-overflow:ellipsis; }
+  .hero .pad .num, .hero .pad .branch { font-size:7px; }
+  .hero .pad .snip { font-size:9px; }
+  .hero .pad .foot { gap:2px; }
+  .hero .pad .state { font-size:6px; letter-spacing:.03em; gap:3px; }
+  .hero .pad .wave { margin-right:3px; }
+  .hero .pad .led { width:4px; height:4px; }
+  .spec-strip { grid-template-columns:1fr; gap:0; padding-top:0; }
+  .spec-strip > div { flex-direction:row; align-items:center; justify-content:flex-start; padding:18px 8px; gap:22px; }
+  .spec-strip > div + div { border-left:0; border-top:1px solid var(--hairline); }
+  .spec-number, .spec-symbol { width:36px; text-align:center; }
+  .spec-copy b { font-size:12px; }
+  .sec { padding-block:72px; }
+}
+
+
+/* A shared-element controller → iPad scroll study. The same nine keys persist. */
+.hero { padding-bottom:66px; }
+.morph-story { position:relative; height:260vh; background:var(--bg2); border-block:1px solid var(--hairline); }
+.morph-sticky { position:sticky; top:64px; height:calc(100svh - 64px); min-height:640px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; padding:26px 24px 18px; background:var(--bg2); }
+.morph-heading { text-align:center; position:relative; z-index:2; flex:none; }
+.morph-heading .label { font-size:8px; letter-spacing:.18em; }
+.morph-heading h2 { font-size:clamp(30px,3.6vw,48px); font-weight:450; letter-spacing:-.055em; line-height:1.06; margin-top:14px; }
+.morph-heading h2 em { font-family:Georgia,serif; color:var(--accent); font-weight:400; }
+.morph-description { font-size:12px; line-height:1.6; color:var(--muted); margin-top:14px; }
+.morph-stage { width:100%; max-width:940px; height:540px; max-height:56vh; position:relative; flex:none; perspective:1800px; }
+.morph-device { position:absolute; width:840px; height:520px; left:50%; top:50%; margin-left:-420px; margin-top:-260px; transform-style:preserve-3d; --digital:0; --physical:1; --morph:0; }
+.morph-shell { position:absolute; border:1px solid #bec6c2; background:linear-gradient(145deg,#fafdfb,#dce4df 70%,#c4d2cc); box-shadow:inset 0 2px 2px #fff, inset 0 -8px 0 #aebbb0, 0 14px 0 -3px #b6c4bd,0 45px 55px -26px #2b443f55,0 80px 90px -40px #293e3740; }
+.morph-screen { position:absolute; inset:14px; border-radius:25px; background:linear-gradient(150deg,#f7faf8,#e7ede9); opacity:var(--digital); border:1px solid #ffffff30; }
+.morph-camera { position:absolute; left:5px; top:254px; width:5px; height:5px; border-radius:50%; background:#26323c; box-shadow:inset 1px 1px 1px #ffffff25; opacity:var(--digital); }
+.morph-hardware { opacity:var(--physical); position:absolute; }
+.morph-dial { left:253px; top:63px; width:60px; height:60px; border-radius:50%; background:repeating-conic-gradient(#e7ede8 0deg 5deg,#c3cec6 5deg 10deg); box-shadow:0 9px 0 #b1bfb5,0 13px 12px #21372822; }
+.morph-dial i { position:absolute; inset:7px; border-radius:50%; background:linear-gradient(140deg,#fff,#e1e8e2); box-shadow:inset 0 1px 1px white; }
+.morph-dial i::after { content:''; position:absolute; top:7px; left:50%; width:3px; height:12px; background:#778d80; border-radius:3px; }
+.morph-stick { left:531px; top:67px; width:42px; height:42px; border-radius:50%; background:linear-gradient(140deg,#38483e,#18281e); box-shadow:0 12px 0 #1d2c23,0 20px 0 3px #aebdb3,0 23px 12px #172e2925; }
+.morph-engraving { position:absolute; top:352px; left:248px; width:336px; font:7px ui-monospace,monospace; letter-spacing:.13em; color:#6e8074; opacity:var(--physical); display:flex; justify-content:space-between; }
+.morph-apphead { position:absolute; left:40px; right:40px; top:34px; display:flex; justify-content:space-between; align-items:center; color:#3c5145; opacity:var(--digital); }
+.morph-apphead b { font-size:14px; letter-spacing:-.03em; }
+.morph-apphead b span { font:8px ui-monospace,monospace; letter-spacing:.2em; color:#7d8b81; margin-left:10px; }
+.morph-apphead > span { font:7px ui-monospace,monospace; letter-spacing:.15em; display:flex; gap:7px; align-items:center; }
+.morph-apphead i { width:5px; height:5px; border-radius:50%; background:#4d9774; box-shadow:0 0 5px #4d977466; }
+.morph-lane { position:absolute; transform-origin:top left; border:1px solid #c3cec7; border-radius:12px; background:linear-gradient(150deg,#fafffc,#e2e9e4); color:#30463a; box-shadow:inset 0 1px 1px #fff,0 calc(8px * var(--physical)) 0 #aabbb0,0 calc(11px * var(--physical)) 0 #6c7e71,0 calc(16px * var(--physical)) 9px -5px #35473933; overflow:hidden; }
+.morph-lane::before { content:''; position:absolute; inset:5px; border-radius:9px; border:1px solid #ffffffa0; opacity:var(--physical); background:linear-gradient(145deg,#ffffff99,transparent); }
+.morph-cap { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; line-height:1; color:var(--key-color); text-shadow:0 2px 2px #57625b22; opacity:calc(1 - var(--digital)); }
+.morph-detail { position:absolute; inset:13px 15px; opacity:var(--digital); display:flex; flex-direction:column; }
+.morph-lane-number { display:flex; align-items:center; justify-content:space-between; font:7px ui-monospace,monospace; letter-spacing:.14em; color:#7c8a80; }
+.morph-lane-number i { width:5px; height:5px; border-radius:50%; background:var(--key-color); }
+.morph-detail > b { font-size:13px; font-weight:600; letter-spacing:-.025em; margin-top:9px; }
+.morph-branch { font:8px ui-monospace,monospace; color:#8a968d; margin-top:3px; }
+.morph-detail p { font-size:9px; line-height:1.45; color:#6e7c72; margin-top:8px; }
+.morph-lane-foot { display:flex; align-items:center; justify-content:space-between; margin-top:auto; font:6px ui-monospace,monospace; letter-spacing:.1em; color:#78897e; }
+.morph-meter { color:var(--key-color); font-size:12px; letter-spacing:1px; }
+.morph-talk { position:absolute; display:flex; align-items:center; justify-content:center; gap:14px; border-radius:12px; border:1px solid #b4c5b9; background:linear-gradient(150deg,#f8fdf9,#dce6df); color:#5f7768; box-shadow:0 calc(7px * var(--physical)) 0 #a3b6a9,0 calc(10px * var(--physical)) 0 #6e8275; }
+.morph-talk-icon { font-size:15px; }
+.morph-talk b { font:600 10px ui-monospace,monospace; letter-spacing:.18em; }
+.morph-talk-note { font:7px ui-monospace,monospace; letter-spacing:.1em; opacity:var(--digital); }
+.morph-extra { left:514px; top:285px; width:70px; height:54px; border-radius:11px; border:1px solid #c1cdc3; box-shadow:0 7px 0 #9caf9e,0 10px 0 #6f8274; background:linear-gradient(140deg,#f8fdfa,#d8e3db); display:flex; align-items:center; justify-content:center; color:#7a8e80; font-size:23px; }
+.morph-extra-command { left:502px; top:214px; width:70px; height:56px; }
+.morph-home { position:absolute; width:110px; height:4px; background:#7a8980; border-radius:4px; bottom:22px; left:365px; opacity:var(--digital); }
+.morph-caption { width:min(100%,520px); flex:none; margin-top:8px; }
+.morph-caption-label,.morph-endpoints { display:flex; justify-content:space-between; gap:10px; font:8px ui-monospace,monospace; letter-spacing:.12em; color:var(--muted); }
+.morph-caption-label > span:first-child { color:var(--accent); }
+.morph-scroll-hint { font-size:7px; color:var(--faint); }
+.morph-track { height:2px; background:var(--hairline2); margin:14px 0 10px; overflow:hidden; }
+.morph-track > span { display:block; width:100%; height:100%; background:var(--accent); transform:scaleX(0); transform-origin:left; }
+.morph-endpoints { font-size:7px; color:var(--faint); }
+.morph-credit { font-size:9px; color:var(--faint); text-align:center; margin-top:22px; line-height:1.5; }
+.morph-credit a { text-decoration:underline; text-underline-offset:3px; }
+@media (max-height:800px) and (min-width:601px) {
+  .morph-sticky { min-height:0; padding-top:16px; }
+  .morph-heading h2 { font-size:32px; }
+  .morph-heading .label, .morph-description { display:none; }
+  .morph-stage { max-height:60vh; }
+  .morph-credit { margin-top:14px; }
+}
+@media (max-width:600px) {
+  .hero { padding-bottom:54px; }
+  .morph-story { height:225vh; }
+  .morph-sticky { padding:28px 18px 18px; min-height:0; }
+  .morph-heading h2 { font-size:32px; }
+  .morph-description { font-size:11px; max-width:270px; margin-inline:auto; }
+  .morph-stage { height:360px; max-height:48svh; }
+  .morph-caption-label { font-size:7px; letter-spacing:.04em; }
+  .morph-scroll-hint { font-size:6px; }
+  .morph-credit { max-width:280px; font-size:8px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .morph-story { height:auto; }
+  .morph-sticky { position:relative; top:0; height:auto; min-height:0; padding-block:54px; }
+  .morph-scroll-hint { display:none; }
+}
+
+
+/* The Blender mesh replaces the CSS fallback only after a successful first frame. */
+.pad-webgl { position:absolute; inset:0; width:100%; height:100%; display:block; }
+.morph-stage.has-webgl .morph-device { visibility:hidden; }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <div class="wrap">
+    <div class="wordmark">
+      <span class="se">SpeakEasy</span>
+      <span class="ptag">THE PAD</span>
+    </div>
+    <div class="navlinks">
+      <a href="#surface">SURFACE</a>
+      <a href="#lanes">LANES</a>
+      <a href="#speech">SPEECH</a>
+      <a href="#player">PLAYER</a>
+      <a href="#themes">THEMES</a>
+      <a href="#install">INSTALL</a>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <button class="mode-toggle" id="modeToggle" type="button" aria-label="Toggle light and dark page mode">&#x25D0; LIGHT</button>
+      <div class="mac-live"><span class="led on breathe"></span>MAC LIVE</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ 1 · HERO ============ -->
+<section class="hero" id="surface">
+  <div class="wrap">
+    <div>
+      <p class="hero-meta label"><span class="hero-signal" aria-hidden="true"></span> THE PAD FOR CODEX <span class="meta-divider">/</span> <span id="chipFinish">PORCELAIN</span></p>
+      <h1 class="display">Your Codex tasks.<br><em>Within reach.</em></h1>
+      <p class="sub">Nine lanes for the work already in motion.<br>Hold to talk. Let your Mac answer back.</p>
+      <div class="keys">
+        <a class="key solid" href="#install">GET THE APP <span aria-hidden="true">↗</span></a>
+        <a class="key ghost" href="#transformation">EXPLORE THE PAD <span aria-hidden="true">↓</span></a>
+      </div>
+      <p class="aside">MADE FOR iPAD <span>·</span> CONNECTED TO YOUR MAC</p>
+    </div>
+
+  </div>
+</section>
+
+<section class="morph-story" id="transformation" aria-labelledby="morph-title">
+  <div class="morph-sticky">
+    <div class="morph-heading">
+      <p class="label acc">FROM PHYSICAL TO POSSIBLE</p>
+      <h2 id="morph-title">A familiar feeling.<br><em>A whole new surface.</em></h2>
+      <p class="morph-description">The idea of a dedicated controller. The possibilities of an iPad.</p>
+    </div>
+    <div class="morph-stage" role="img" aria-label="A compact tactile controller transforms into an iPad with nine SpeakEasy task lanes as you scroll.">
+      <div class="morph-device">
+        <div class="morph-shell"></div>
+        <div class="morph-screen"></div>
+        <div class="morph-camera"></div>
+        <div class="morph-hardware morph-dial"><i></i></div>
+        <div class="morph-hardware morph-stick"><i></i></div>
+        <div class="morph-engraving">SPEAKEASY <span>MICRO → PAD</span></div>
+        <div class="morph-apphead"><b>SpeakEasy <span>THE PAD</span></b><span><i></i> MAC CONNECTED</span></div>
+        <div class="morph-lanes">
+          <div class="morph-lane" data-lane="0" style="--key-color:#83aa9b">
+            <span class="morph-cap" aria-hidden="true">◉</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 02<i></i></span><b>speakeasy</b><span class="morph-branch">feat/voice-lanes</span><p>Your voice has a place. Ready when you are.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>LIVE</span></div>
+          </div>
+          <div class="morph-lane" data-lane="1" style="--key-color:#c4b4e7">
+            <span class="morph-cap" aria-hidden="true">◉</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 03<i></i></span><b>scout</b><span class="morph-branch">feat/broker-retry</span><p>The connection is back. All tasks are in sync.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>THINKING</span></div>
+          </div>
+          <div class="morph-lane" data-lane="2" style="--key-color:#a7bdd8">
+            <span class="morph-cap" aria-hidden="true">◉</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 01<i></i></span><b>dewey</b><span class="morph-branch">docs/restructure</span><p>The new navigation is ready for a look.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>COMPLETE</span></div>
+          </div>
+          <div class="morph-lane" data-lane="3" style="--key-color:#d9bd7b">
+            <span class="morph-cap" aria-hidden="true">◉</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 04<i></i></span><b>speakeasy</b><span class="morph-branch">fix/cache-ttl</span><p>Waiting on your review of the cache update.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>NEEDS INPUT</span></div>
+          </div>
+          <div class="morph-lane" data-lane="4" style="--key-color:#a7c7b6">
+            <span class="morph-cap" aria-hidden="true">◉</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 05<i></i></span><b>landing</b><span class="morph-branch">design/pad</span><p>A little more space. A whole new surface.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>COMPLETE</span></div>
+          </div>
+          <div class="morph-lane" data-lane="5" style="--key-color:#b8b2d1">
+            <span class="morph-cap" aria-hidden="true">◉</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 06<i></i></span><b>research</b><span class="morph-branch">explore/next</span><p>Comparing the options for the next step.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>THINKING</span></div>
+          </div>
+          <div class="morph-lane" data-lane="6" style="--key-color:#b0bab5">
+            <span class="morph-cap" aria-hidden="true">↗</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 07<i></i></span><b>Your next task</b><span class="morph-branch">— unassigned</span><p>Hold this lane to make it yours.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>AVAILABLE</span></div>
+          </div>
+          <div class="morph-lane" data-lane="7" style="--key-color:#b0bab5">
+            <span class="morph-cap" aria-hidden="true">✳</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 08<i></i></span><b>Room to explore</b><span class="morph-branch">— unassigned</span><p>A space for another idea.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>AVAILABLE</span></div>
+          </div>
+          <div class="morph-lane" data-lane="8" style="--key-color:#b0bab5">
+            <span class="morph-cap" aria-hidden="true">↶</span>
+            <div class="morph-detail"><span class="morph-lane-number">LANE 09<i></i></span><b>Something new</b><span class="morph-branch">— unassigned</span><p>Pick a task. Keep it close.</p><span class="morph-lane-foot"><span class="morph-meter">▥▥▥▥▥</span>AVAILABLE</span></div>
+          </div>
+
+        </div>
+        <div class="morph-talk"><span class="morph-talk-icon">●</span><b>HOLD TO SPEAK</b><span class="morph-talk-note">RELEASE TO SEND</span></div>
+        <div class="morph-extra morph-hardware">⌘</div>
+        <div class="morph-extra morph-extra-command morph-hardware">⊕</div>
+        <div class="morph-home"></div>
+      </div>
+    </div>
+    <div class="morph-caption">
+      <div class="morph-caption-label"><span id="morphPhase">01 — THE TACTILE IDEA</span><span class="morph-scroll-hint">SCROLL TO TRANSFORM ↓</span></div>
+      <div class="morph-track"><span></span></div>
+      <div class="morph-endpoints"><span>MICRO CONTROLLER</span><span>THE iPAD APP</span></div>
+    </div>
+    <p class="morph-credit">A concept inspired by <a href="https://worklouder.cc/codex-micro" target="_blank" rel="noopener noreferrer">Work Louder’s Codex Micro ↗</a>. Reimagined for SpeakEasy.</p>
+  </div>
+</section>
+
+<div class="spec-strip wrap" aria-label="At a glance">
+  <div><span class="spec-number">09</span><span class="spec-copy"><b>A place for every task</b><span>One Codex task per lane</span></span></div>
+  <div><span class="spec-symbol" aria-hidden="true">↗</span><span class="spec-copy"><b>A direct line to your Mac</b><span>Hold to speak, release to send</span></span></div>
+  <div><span class="spec-symbol" aria-hidden="true">≋</span><span class="spec-copy"><b>Keep the conversation going</b><span>Replies read back to you</span></span></div>
+</div>
+
+<!-- ============ 2 · ARGUMENT ============ -->
+<section class="sec argument hairline-t" id="argument">
+  <div class="wrap">
+    <span class="label acc">WHAT IT'S FOR</span>
+    <h2 style="margin-top:18px;">Every running task<br><span class="dim">gets its own key.</span><br>All nine <span class="acc">on one screen.</span></h2>
+    <p class="label kicker">ONE LANE PER TASK — NINE ON THE PAD, TWELVE ON THE MICRO DECK.</p>
+  </div>
+</section>
+
+<!-- ============ 3 · LANES ============ -->
+<section class="sec hairline-t" id="lanes">
+  <div class="wrap">
+    <div class="lanegrid">
+      <div class="bigpad">
+        <span class="num">LN 1 · BOUND 04:12:07</span>
+        <div class="proj">speakeasy</div>
+        <div class="branch">~/dev/SpeakEasy · codex/native-ipad-deck · thread f89f1953</div>
+        <div class="snip">"Testing one two one two. Let's see, let's go." — arrived on lane 1, in the Codex task that lane is bound to.</div>
+        <div class="divider"></div>
+        <div class="meta">
+          <span class="wave play"></span>
+          <span class="state live mono" style="font-size:10px;letter-spacing:.2em;color:var(--accent);"><span class="led on breathe" style="display:inline-block;margin-right:6px;"></span>LIVE · THREAD ATTACHED</span>
+        </div>
+      </div>
+      <div>
+        <span class="label acc">WHAT A LANE HOLDS</span>
+        <h2 class="display" style="font-size:clamp(30px,3.6vw,46px);margin-top:18px;">Each key holds<br>whatever you put on it.</h2>
+        <p style="margin-top:20px;font-size:15.5px;font-weight:300;line-height:1.7;color:var(--muted);">
+        You pick what goes on each key. Today that's <b style="color:var(--text);font-weight:500;">one exact Codex task</b> —
+        the key shows the project, the git branch, the last exchange, and whether that task is live, idle, or queued.
+        Routing is by task ID, so nothing depends on which window is focused
+        or what the most recent thread is called.</p>
+        <ul class="checklist">
+          <li><span class="tick">01</span><span><b>You assign it, and it stays assigned.</b> A key keeps its task across reloads until you move it.</span></li>
+          <li><span class="tick">02</span><span><b>The task ID is the address.</b> Each send revalidates the binding with Codex Desktop first.</span></li>
+          <li><span class="tick">03</span><span><b>It fails closed.</b> If the binding can't be verified, the send stops — it won't pick a different task.</span></li>
+          <li><span class="tick">04</span><span><b>State is on the key.</b> Live, idle, or queued, readable without opening anything.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- micro deck -->
+    <div class="microdeck">
+      <div class="md-grid">
+        <div class="md-key hot"><span class="k">A1</span><span class="v">spk-web</span></div>
+        <div class="md-key"><span class="k">A2</span><span class="v">scout</span></div>
+        <div class="md-key"><span class="k">A3</span><span class="v">dewey</span></div>
+        <div class="md-key"><span class="k">A4</span><span class="v">landing</span></div>
+        <div class="md-key"><span class="k">B1</span><span class="v">cache-fix</span></div>
+        <div class="md-key blank"><span class="k">B2</span><span class="v">—</span></div>
+        <div class="md-key blank"><span class="k">B3</span><span class="v">—</span></div>
+        <div class="md-key blank"><span class="k">B4</span><span class="v">—</span></div>
+        <div class="md-key blank"><span class="k">C1</span><span class="v">—</span></div>
+        <div class="md-key blank"><span class="k">C2</span><span class="v">—</span></div>
+        <div class="md-key blank"><span class="k">C3</span><span class="v">—</span></div>
+        <div class="md-key blank"><span class="k">C4</span><span class="v">—</span></div>
+        <div class="md-key hot"><span class="k">D1</span><span class="v">RPLY</span></div>
+        <div class="md-key"><span class="k">D2</span><span class="v">STOP</span></div>
+        <div class="md-key"><span class="k">D3</span><span class="v">AUTO</span></div>
+        <div class="md-key"><span class="k">D4</span><span class="v">ACTV</span></div>
+      </div>
+      <div>
+        <span class="label acc">MICRO DECK · 4×4 KEY BANK</span>
+        <h3 class="display" style="font-size:clamp(26px,3vw,38px);margin-top:18px;">More than nine tasks?<br>Use the 4×4.</h3>
+        <p style="margin-top:20px;font-size:15px;font-weight:300;line-height:1.7;color:var(--muted);max-width:460px;">
+        The Micro Deck is a 4×4 key bank with the same binding model: one exact task per key,
+        same fail-closed check. The bottom row is transport, which leaves twelve lanes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 · HOLD TO SPEAK ============ -->
+<section class="sec speak-sec" id="speech">
+  <div class="wrap" style="text-align:center;">
+    <span class="label acc">THE BIG BAR</span>
+    <h2 class="display" style="font-size:clamp(34px,4.6vw,60px);margin-top:18px;">Your Mac does<br>the transcribing.</h2>
+    <p style="margin:20px auto 0;max-width:560px;font-size:16px;font-weight:300;line-height:1.7;color:var(--muted);">
+    Hold the bar and talk. The iPad records the audio and hands it to your Mac over the local network,
+    where SpeakEasy's Parakeet model produces the transcript. Nothing goes to a speech server.
+    Let go and the transcript is sent once, to the task bound to that lane.</p>
+    <div class="speakbar bigbar" style="max-width:860px;margin-left:auto;margin-right:auto;">
+      <span class="mic">●</span>
+      <span class="t">HOLD TO SPEAK</span>
+      <span class="s">MOMENTARY · PARAKEET ON YOUR MAC · LANE 01</span>
+    </div>
+    <div class="specline">
+      <span>TRANSCRIPTION: ON YOUR MAC</span><span class="sep">·</span>
+      <span>ROUTING: EXACT TASK ID</span><span class="sep">·</span>
+      <span>DELIVERY: EXACTLY ONCE</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 · ANATOMY ============ -->
+<section class="sec hairline-t" id="anatomy">
+  <div class="wrap">
+    <div class="sec-head roomy">
+      <span class="label acc">ANATOMY</span>
+      <h2 class="display">What the controls do.</h2>
+    </div>
+    <div class="anatomy">
+      <div class="unit" style="position:relative;">
+        <span class="screw tl"></span><span class="screw tr"></span><span class="screw bl"></span><span class="screw br"></span>
+        <span class="callout" style="top:62px;left:44px;">1</span>
+        <span class="callout" style="top:200px;left:44px;">2</span>
+        <span class="callout" style="top:116px;left:44px;">3</span>
+        <span class="callout" style="top:56px;right:44px;">4</span>
+        <span class="callout" style="bottom:94px;right:44px;">5</span>
+        <span class="callout" style="bottom:36px;left:12px;">6</span>
+        <div class="unit-body" style="margin-top:8px;">
+          <div class="unit-side">
+            <div class="encoder"><div class="ring"></div><div class="face"></div></div>
+            <div class="side-leds">
+              <div class="row"><span class="led on"></span><span class="label">BRG</span></div>
+              <div class="row"><span class="led"></span><span class="label">MIC</span></div>
+              <div class="row"><span class="led amber"></span><span class="label">QUE</span></div>
+            </div>
+            <div class="grille"></div>
+          </div>
+          <div class="pads">
+            <div class="pad active"><div><span class="num">LN 1</span><div class="proj">speakeasy</div></div><div class="foot"><span class="wave play"></span><span class="state live">LIVE</span></div></div>
+            <div class="pad"><div><span class="num">LN 2</span><div class="proj">scout</div></div><div class="foot"><span class="wave dimmer"></span><span class="state">IDLE</span></div></div>
+            <div class="pad empty"><div><span class="num">LN 3</span><div class="proj">—</div></div><div class="foot"><span></span><span class="state"></span></div></div>
+            <div class="pad"><div><span class="num">LN 4</span><div class="proj">dewey</div></div><div class="foot"><span class="wave dimmer"></span><span class="state">IDLE</span></div></div>
+            <div class="pad"><div><span class="num">LN 5</span><div class="proj">speakeasy</div></div><div class="foot"><span class="wave amber"></span><span class="state queued">QUEUED</span></div></div>
+            <div class="pad empty"><div><span class="num">LN 6</span><div class="proj">—</div></div><div class="foot"><span></span><span class="state"></span></div></div>
+            <div class="pad"><div><span class="num">LN 7</span><div class="proj">landing</div></div><div class="foot"><span class="wave dimmer"></span><span class="state">IDLE</span></div></div>
+            <div class="pad empty"><div><span class="num">LN 8</span><div class="proj">—</div></div><div class="foot"><span></span><span class="state"></span></div></div>
+            <div class="pad empty"><div><span class="num">LN 9</span><div class="proj">—</div></div><div class="foot"><span></span><span class="state"></span></div></div>
+          </div>
+        </div>
+        <div class="unit-bottom">
+          <div class="speakbar"><span class="mic">●</span><span class="t">HOLD TO SPEAK</span><span class="s">LANE 01</span></div>
+          <div class="transport">
+            <div class="tkey">RPLY</div><div class="tkey stop">■</div><div class="tkey">AUTO</div><div class="tkey">ACTV</div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="n">01</span><div><b>Encoder</b><p>Narration volume. Press it to pause playback; the task keeps running.</p></div></li>
+        <li><span class="n">02</span><div><b>Speaker grille</b><p>Status voice for binds, confirmations, and errors. Playback goes to your speakers or headphones.</p></div></li>
+        <li><span class="n">03</span><div><b>Status LEDs</b><p>Bridge, mic, and queue depth. If the bridge LED is dark, the Mac isn't connected and sends won't go through.</p></div></li>
+        <li><span class="n">04</span><div><b>Lane pads ×9</b><p>One exact Codex task each, with its project, branch, last exchange, and state.</p></div></li>
+        <li><span class="n">05</span><div><b>Transport</b><p>REPLAY the last answer, STOP narration, AUTO-narrate completions, ACTIVITY inbox.</p></div></li>
+        <li><span class="n">06</span><div><b>Hold to speak</b><p>Momentary button, on-device Parakeet ASR. Releasing it sends the transcript once, to the bound task.</p></div></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 · ONE TURN / SIGNAL PATH ============ -->
+<section class="sec hairline-t" id="loop">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="label acc">ONE TURN, END TO END</span>
+      <h2 class="display">The signal path.</h2>
+      <p>Dictation and narration both attach to the same Codex task, so there's no second conversation to merge back in later.</p>
+    </div>
+    <div class="chain">
+      <div class="node"><b>HOLD</b><span>LANE 01 · MOMENTARY</span></div>
+      <div class="link">→</div>
+      <div class="node"><b>TRANSCRIBE</b><span>PARAKEET · ON YOUR MAC</span></div>
+      <div class="link">→</div>
+      <div class="node"><b>ROUTE</b><span>EXACT TASK ID</span></div>
+      <div class="link">→</div>
+      <div class="node"><b>CODEX REPLIES</b><span>THREAD f89f1953</span></div>
+      <div class="link">→</div>
+      <div class="node hot"><b>NARRATE</b><span>NATIVE PLAYER · 1.25×</span></div>
+    </div>
+    <div class="truths">
+      <div class="truth"><b>SAME CONVERSATION</b><p>Your dictation and Codex's reply stay in the same task. SpeakEasy handles voice and playback; it doesn't run a conversation of its own.</p></div>
+      <div class="truth"><b>ROUTED BY TASK ID</b><p>Sends are addressed by exact task ID, not by title, recency, folder, or window focus. If the binding can't be verified, the send stops.</p></div>
+      <div class="truth"><b>DURABLE QUEUE</b><p>The queue is on disk, so it survives a relaunch. What you said arrives once, in order, even if the iPad slept in between.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7 · PLAYER ============ -->
+<section class="sec hairline-t" id="player" style="background:var(--bg2);">
+  <div class="wrap">
+    <div class="playerwrap">
+      <div>
+        <span class="label acc">PLAYBACK</span>
+        <h2 class="display" style="font-size:clamp(30px,3.6vw,46px);margin-top:18px;">Answers come back<br>as audio you can scrub.</h2>
+        <p style="margin-top:20px;font-size:15.5px;font-weight:300;line-height:1.7;color:var(--muted);">
+        Scrub the reply, change the speed, replay the last exchange with RPLY, or turn on AUTO
+        to have completions narrated as tasks finish. The full text is still in Codex;
+        this is for when you'd rather listen than read.</p>
+        <p class="label" style="margin-top:26px;">SCRUB · 0.5–2× SPEED · VOLUME ON THE ENCODER · DURABLE QUEUE</p>
+      </div>
+      <div class="player">
+        <div class="ptop">
+          <span class="ptitle">LANE 01 <span>·</span> spk-web <span>·</span> <span>THREAD f89f1953</span></span>
+          <span class="led on breathe"></span>
+        </div>
+        <div class="pmain">
+          <div class="playbtn"><span class="tri"></span></div>
+          <div class="scrub">
+            <div class="wave play"></div>
+            <div class="ptime"><span>0:18 / 1:42</span><span>CODEX REPLIED</span></div>
+          </div>
+        </div>
+        <div class="pctl">
+          <span class="pchip">RPLY</span>
+          <span class="pchip on">1.25×</span>
+          <span class="pchip">0.5×</span>
+          <span class="pchip">2×</span>
+          <span class="pchip">READ TRANSCRIPT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8 · THEMES ============ -->
+<section class="sec hairline-t" id="themes">
+  <div class="wrap">
+    <div class="sec-head roomy">
+      <span class="label acc">FIVE FINISHES</span>
+      <h2 class="display">Five themes,<br>same layout.</h2>
+      <p>Tap one to repaint this page. It's the same CSS token set the deck itself uses.</p>
+    </div>
+    <div class="swatches">
+      <div class="swatch" data-set-theme="paper" role="button" tabindex="0" aria-label="Apply the paper finish">
+        <div class="prev theme-paper"><span class="mini"></span><span class="mini"></span><span class="mini"></span><span class="mini"></span></div>
+        <div class="swlabel"><span>PAPER</span><span class="mono" style="font-size:8px;color:var(--faint);">WARM CREAM</span></div>
+      </div>
+      <div class="swatch" data-set-theme="flight" role="button" tabindex="0" aria-label="Apply the flight finish">
+        <div class="prev theme-flight"><span class="mini"></span><span class="mini"></span><span class="mini"></span><span class="mini"></span></div>
+        <div class="swlabel"><span>FLIGHT</span><span class="mono" style="font-size:8px;color:var(--faint);">COOL STEEL</span></div>
+      </div>
+      <div class="swatch" data-set-theme="obsidian" role="button" tabindex="0" aria-label="Apply the obsidian finish">
+        <div class="prev theme-obsidian"><span class="mini"></span><span class="mini"></span><span class="mini"></span><span class="mini"></span></div>
+        <div class="swlabel"><span>OBSIDIAN</span><span class="mono" style="font-size:8px;color:var(--faint);">TRUE BLACK</span></div>
+      </div>
+      <div class="swatch" data-set-theme="ember" role="button" tabindex="0" aria-label="Apply the ember finish">
+        <div class="prev theme-ember"><span class="mini"></span><span class="mini"></span><span class="mini"></span><span class="mini"></span></div>
+        <div class="swlabel"><span>EMBER</span><span class="mono" style="font-size:8px;color:var(--faint);">WARM DARK</span></div>
+      </div>
+      <div class="swatch current" data-set-theme="porcelain" role="button" tabindex="0" aria-label="Apply the porcelain finish">
+        <div class="prev theme-porcelain"><span class="mini"></span><span class="mini"></span><span class="mini"></span><span class="mini"></span></div>
+        <div class="swlabel"><span>PORCELAIN</span><span class="tag">SHOWN</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9 · SPEC PLATE (HONESTY) ============ -->
+<section class="sec hairline-t" id="honesty">
+  <div class="wrap">
+    <div class="plate">
+      <h3>WHAT YOU NEED</h3>
+      <p>THE PAD is an <b>iPadOS app</b>, and it does not work alone. It needs SpeakEasy and
+      <b>Codex Desktop</b> running on an Apple silicon Mac. That Mac holds the Parakeet model,
+      the narration voices, and the bridge the nine lanes bind to.</p>
+      <p>Put both on the <b>same Wi-Fi</b> and choose your Mac in the app.
+      Complete the connection and permission steps shown in Settings → Deck.</p>
+      <p class="fine">INTEGRATION BOUNDARY — THE CODEX BRIDGE USES PRIVATE, VERSION-CHECKED CODEX DESKTOP IPC AND FAILS
+      CLOSED ON INCOMPATIBILITY. IT IS NOT PRESENTED AS A SUPPORTED PUBLIC CODEX API. SPEECH IS TRANSCRIBED
+      BY THE PAIRED MAC; NO ARACH SPEECH SERVER SITS IN THE PATH.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 · INSTALL ============ -->
+<section class="sec install hairline-t" id="install" style="background:var(--bg2);">
+  <div class="wrap">
+    <span class="label acc">GET THE PAD</span>
+    <h2 class="display" style="font-size:clamp(34px,4.6vw,58px);margin-top:18px;">Start with your Mac.</h2>
+    <p style="margin:20px auto 0;max-width:480px;font-size:15.5px;font-weight:300;line-height:1.7;color:var(--muted);">
+    Download the Mac app, then connect from the browser Deck. The native iPad app is
+    coming to TestFlight; join the list for an invite when it is available.</p>
+
+    <div class="twostep">
+      <div class="step">
+        <span class="n">STEP 01 · ON YOUR MAC</span>
+        <h3>Download SpeakEasy for Mac.</h3>
+        <p>Open the DMG, drag SpeakEasy to Applications, and launch it. Settings → Deck
+        walks you through connecting your agents and devices. No source build required.</p>
+        <p><a class="key solid" href="{{releaseDownloadUrl}}">DOWNLOAD DMG · {{releaseVersion}}</a></p>
+        <div class="ask">
+          <div class="head">
+            <span class="label">PASTE INTO CODEX</span>
+            <button class="copy" id="copyBtn" data-copy-target="askText">COPY</button>
+          </div>
+          <p class="body" id="askText">{{codexInstallPrompt}}</p>
+        </div>
+        <p class="orelse">Signed and notarized. <a href="{{releasePageUrl}}">Release notes and checksums</a>.
+        Prefer agent-assisted setup? Copy the prompt above.</p>
+        <p class="foot">MACOS 14+ APPLE SILICON · CODEX DESKTOP</p>
+      </div>
+      <div class="step">
+        <span class="n">STEP 02 · ON YOUR IPAD</span>
+        <h3>Not out yet.</h3>
+        <p>The Pad goes to TestFlight before the App Store. Say you want it and I'll send an
+        invite when the build is up — that is the only thing this does with your address.
+        Once installed, choose your Mac on the same Wi-Fi and connect your lanes.</p>
+        <form class="interest" id="interestForm" novalidate>
+          <input type="email" id="interestEmail" name="email" required autocomplete="email"
+                 placeholder="you@example.com" aria-label="Your email address">
+          <button class="key solid" type="submit" id="interestSubmit">TELL ME WHEN</button>
+        </form>
+        <p class="interest-note" id="interestNote" role="status" aria-live="polite"></p>
+        <p class="foot">IPADOS 26+ · IPAD · <a href="/privacy/">HOW WE HANDLE YOUR EMAIL</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="wordmark"><span class="se" style="font-size:13px;">SpeakEasy</span><span class="ptag">THE PAD</span></div>
+      <p class="label" style="margin-top:12px;">A PAD FOR THE CODEX TASKS YOU ARE ALREADY RUNNING.</p>
+    </div>
+    <div class="label" style="text-align:right;">
+      MODEL SE-1 · <span id="footFinish">PORCELAIN</span><br>
+      SPEAKEASY © 2026
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+
+  // Scroll is the playhead. Each pose can be reached directly and in either direction.
+  var story = document.getElementById('transformation');
+  if (story) {
+    var stage = story.querySelector('.morph-stage');
+    var device = story.querySelector('.morph-device');
+    var shell = story.querySelector('.morph-shell');
+    var screen = story.querySelector('.morph-screen');
+    var talk = story.querySelector('.morph-talk');
+    var lanes = Array.from(story.querySelectorAll('.morph-lane'));
+    var track = story.querySelector('.morph-track > span');
+    var phase = document.getElementById('morphPhase');
+    var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var scheduled = false;
+    import('/scripts/pad-scene.js').then(function(module) { return module.mountPadScene(stage); }).catch(function(error) { console.warn('3D preview unavailable; keeping the illustrated transition.',error); });
+    var clamp = function(v) { return Math.max(0, Math.min(1,v)); };
+    var smooth = function(v) { v=clamp(v); return v*v*(3-2*v); };
+    var mix = function(a,b,t) { return a+(b-a)*t; };
+    var box = function(el,a,b,t) {
+      el.style.transform='translate('+mix(a[0],b[0],t).toFixed(2)+'px,'+mix(a[1],b[1],t).toFixed(2)+'px)';
+      el.style.width=mix(a[2],b[2],t).toFixed(2)+'px';
+      el.style.height=mix(a[3],b[3],t).toFixed(2)+'px';
+    };
+    var targetSlots = [1,2,0,3,4,5,6,7,8];
+    var physicalKeys = [[326,65],[420,65],[244,142],[330,142],[416,142],[502,142],[244,214],[330,214],[416,214]];
+    function drawMorph() {
+      scheduled=false;
+      var rect=story.getBoundingClientRect();
+      var sticky=story.querySelector('.morph-sticky');
+      var distance=Math.max(1,rect.height-sticky.clientHeight);
+      var raw=motionQuery.matches ? 1 : clamp((64-rect.top)/distance);
+      stage.dataset.progress=raw.toFixed(5);
+      stage.dispatchEvent(new CustomEvent('pad-progress',{detail:raw}));
+      var progress=smooth((raw-.10)/.77);
+      var digital=smooth((raw-.72)/.15);
+      var physical=1-smooth((raw-.23)/.30);
+      var fit=Math.min(stage.clientWidth/900,stage.clientHeight/610,1);
+      // Start larger on narrow screens so the physical controller stays legible.
+      var startFit=Math.min(stage.clientWidth/450,stage.clientHeight/530,1);
+      var scale=mix(startFit,fit,progress);
+      device.style.transform='scale('+scale.toFixed(4)+') rotateX('+mix(20,0,progress).toFixed(2)+'deg) rotateY('+mix(-13,0,progress).toFixed(2)+'deg) rotateZ('+mix(-8,0,progress).toFixed(2)+'deg)';
+      device.style.setProperty('--digital',digital.toFixed(4));
+      device.style.setProperty('--physical',physical.toFixed(4));
+      device.style.setProperty('--morph',progress.toFixed(4));
+      box(shell,[221,40,389,346],[0,0,840,520],progress);
+      box(screen,[235,54,361,318],[14,14,812,492],progress);
+      screen.style.inset='0 auto auto 0';
+      screen.style.opacity=smooth((raw-.30)/.38).toFixed(4);
+      shell.style.borderRadius=mix(30,36,progress)+'px';
+      shell.style.background='linear-gradient(145deg, rgb('+[mix(250,70,progress),mix(253,79,progress),mix(251,74,progress)].map(Math.round).join(',')+'), rgb('+[mix(202,26,progress),mix(216,35,progress),mix(208,31,progress)].map(Math.round).join(',')+'))';
+      shell.style.boxShadow='inset 0 2px 2px #ffffff80,inset 0 -'+mix(8,2,progress)+'px 0 #64776e66,0 '+mix(14,3,progress)+'px 0 -2px #93a29a,0 40px 70px -25px #203b3540';
+      lanes.forEach(function(lane,i) {
+        var slot=targetSlots[i];
+        box(lane,[physicalKeys[i][0],physicalKeys[i][1],70,56],[38+(slot%3)*258,73+Math.floor(slot/3)*120,248,110],progress);
+        // Contract into compact signals before expanding; the paths never collide.
+        var contract=smooth(progress/.30);
+        var expand=smooth((progress-.60)/.40);
+        lane.style.width=(70-30*contract+208*expand).toFixed(2)+'px';
+        lane.style.height=(56-16*contract+70*expand).toFixed(2)+'px';
+      });
+      box(talk,[244,285,244,54],[38,444,764,40],progress);
+      talk.style.background='linear-gradient(145deg, rgb('+[mix(248,61,digital),mix(253,114,digital),mix(249,92,digital)].map(Math.round).join(',')+'), rgb('+[mix(220,44,digital),mix(230,88,digital),mix(223,69,digital)].map(Math.round).join(',')+'))';
+      talk.style.color=digital>.5?'#eff8f1':'#5f7768';
+      track.style.transform='scaleX('+raw.toFixed(4)+')';
+      phase.textContent=stage.classList.contains('has-webgl') ? (raw<.15?'01 — THE TACTILE IDEA':raw<.43?'02 — A CLOSER LOOK':raw<.82?'03 — ROOM TO BECOME MORE':'04 — YOUR TASKS, WITHIN REACH') : (raw<.30?'01 — THE TACTILE IDEA':raw<.76?'02 — ROOM TO BECOME MORE':'03 — YOUR TASKS, WITHIN REACH');
+      story.dataset.phase=raw<.30?'micro':raw<.76?'transform':'ipad';
+    }
+    function requestMorph() { if(!scheduled) { scheduled=true; requestAnimationFrame(drawMorph); } }
+    window.addEventListener('scroll',requestMorph,{passive:true});
+    window.addEventListener('resize',requestMorph,{passive:true});
+    motionQuery.addEventListener('change',requestMorph);
+    drawMorph();
+  }
+
+  // Theme switching — the page is skinned with the same tokens as the deck.
+  var swatches = document.querySelectorAll('[data-set-theme]');
+  swatches.forEach(function (sw) {
+    sw.setAttribute('aria-pressed', sw.classList.contains('current') ? 'true' : 'false');
+    // Enter/Space on a role="button" div does not synthesise a click; forward it.
+    sw.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); sw.click(); }
+    });
+    sw.addEventListener('click', function () {
+      var finish = sw.getAttribute('data-set-theme');
+      document.documentElement.setAttribute('data-theme', finish);
+      document.querySelectorAll('.swatch').forEach(function (s) { s.classList.remove('current'); s.setAttribute('aria-pressed', 'false'); });
+      sw.classList.add('current');
+      sw.setAttribute('aria-pressed', 'true');
+      // Keep the engraved plate honest — a unit skinned in ember should not
+      // still claim to be porcelain.
+      var name = finish.toUpperCase();
+      ['unitFinish', 'chipFinish', 'footFinish'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = name;
+      });
+    });
+  });
+
+  // Page mode toggle — explicit [data-mode] override wins in both directions;
+  // with no override the page follows prefers-color-scheme.
+  var modeBtn = document.getElementById('modeToggle');
+  if (modeBtn) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var effectiveMode = function () {
+      return document.documentElement.getAttribute('data-mode') || (mq.matches ? 'dark' : 'light');
+    };
+    var renderMode = function () {
+      modeBtn.textContent = effectiveMode() === 'dark' ? '\u25D1 DARK' : '\u25D0 LIGHT';
+    };
+    new MutationObserver(renderMode).observe(document.documentElement,{attributes:true,attributeFilter:['data-mode']});
+    modeBtn.addEventListener('click', function () {
+      document.documentElement.setAttribute('data-mode', effectiveMode() === 'dark' ? 'light' : 'dark');
+      renderMode();
+    });
+    if (mq.addEventListener) { mq.addEventListener('change', renderMode); } else if (mq.addListener) { mq.addListener(renderMode); }
+    renderMode();
+  }
+
+  // Copy the install command.
+  /* ---- interest ----
+     This page is a static export on GitHub Pages: there is no server here to
+     receive a post, so the address has to go to a third-party endpoint. Set
+     INTEREST_ENDPOINT to one that accepts a JSON POST of {email, source}.
+
+     Deliberately fails loud when it is empty. A form that accepts an address
+     and quietly drops it is worse than no form — it looks like it worked, and
+     the person never hears back. */
+  var INTEREST_ENDPOINT = 'https://speakeasy-interest.arach.workers.dev/interest';
+
+  var interestForm = document.getElementById('interestForm');
+  if (interestForm) {
+    var emailField = document.getElementById('interestEmail');
+    var submitBtn = document.getElementById('interestSubmit');
+    var note = document.getElementById('interestNote');
+
+    var say = function (message, bad) {
+      note.textContent = message;
+      note.classList.toggle('bad', !!bad);
+    };
+
+    interestForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var email = (emailField.value || '').trim();
+      // The browser's own check, without the native bubble (form is novalidate).
+      if (!email || !emailField.checkValidity()) {
+        say('That does not look like an email address.', true);
+        emailField.focus();
+        return;
+      }
+      if (!INTEREST_ENDPOINT) {
+        say('Sign-ups are not switched on yet — nothing was sent.', true);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      emailField.disabled = true;
+      say('Sending…');
+
+      fetch(INTEREST_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email: email, source: 'pad-testflight' }),
+      }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        interestForm.hidden = true;
+        say('Got it. You will hear from me when the TestFlight build is up.');
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'interest_submit', { source: 'pad-testflight' });
+        }
+      }).catch(function () {
+        submitBtn.disabled = false;
+        emailField.disabled = false;
+        say('That did not go through. Try again in a moment.', true);
+      });
+    });
+  }
+
+  // Copy whatever is actually on screen. The previous version held its own
+  // hardcoded string, which quietly drifted from the visible text — you read one
+  // thing and pasted another.
+  var copyBtn = document.getElementById('copyBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function () {
+      var source = document.getElementById(copyBtn.dataset.copyTarget);
+      if (!source) return;
+      var text = source.textContent.replace(/\s+/g, ' ').trim();
+      var done = function () { copyBtn.textContent = 'COPIED'; setTimeout(function () { copyBtn.textContent = 'COPY'; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else { done(); }
+    });
+  }
+})();
+</script>
+</body>
+</html>

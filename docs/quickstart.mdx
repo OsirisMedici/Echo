@@ -1,0 +1,128 @@
+---
+title: Quickstart
+description: Install the native Codex companion or the TypeScript speech library
+order: 2
+---
+
+# Quickstart
+
+SpeakEasy has two installation paths. Most Codex users should install the
+signed native app. Developers who only need TTS can install the package.
+
+## Path A: voice conversations with Codex
+
+Requirements:
+
+- Apple silicon Mac running macOS 14 or newer;
+- current Codex Desktop, installed and signed in;
+- microphone permission for dictation;
+- local-network permission only when using the browser or iPad Deck.
+
+Paste this bounded task into Codex Desktop:
+
+> Install the latest signed SpeakEasy release on this Mac. Read
+> https://speakeasy.arach.dev/agent.md and follow Path 3. Do not build from
+> source or bypass Gatekeeper. Tell me which version you installed and which
+> human-only permissions or setup steps remain.
+
+Codex downloads and inspects the latest release installer. The installer verifies the
+published checksum, Gatekeeper acceptance, Developer ID team, bundle identity,
+and exact app version before replacing `/Applications/SpeakEasy.app`. It then
+opens **Settings → Deck**.
+
+The packaged app does not require Bun, Node, Xcode, a terminal workflow, or a
+SpeakEasy checkout.
+
+Prefer to install manually? [Download the latest signed DMG](https://github.com/arach/SpeakEasy/releases/latest/download/SpeakEasy.dmg),
+drag SpeakEasy to **Applications**, and open it. Open **Settings → Deck** to
+check the runtime and Codex connection. Approve microphone access when asked
+if you want to dictate.
+
+### First voice turn on the Mac
+
+1. In **Settings → Deck**, wait for the SpeakEasy runtime and Codex checks.
+2. Start the Deck and assign a lane to the Codex task you want to control.
+3. Hold to speak, dictate one sentence, then release to send.
+4. Confirm the dictation appears once in that same Codex task.
+5. Hear the task's real response and try replay, speed, or volume.
+
+### Optional: use the Deck from a browser or iPad
+
+Device setup takes a few extra steps:
+
+1. Connect the device to the same local network as the Mac and allow SpeakEasy
+   local-network access when macOS asks.
+2. Open the bootstrap link shown in **Settings → Deck** on that device.
+3. Follow its instructions to install and trust SpeakEasy's local certificate
+   authority (CA). On iPad, this requires several steps in iOS Settings.
+4. Open the paired HTTPS device link, allow browser microphone access, and try
+   one dictation in the assigned task.
+
+The certificate enables trusted local HTTPS, which the browser needs for
+microphone access. It is only needed for this device path. The browser/PWA is
+the supported device path; the native iPad shell remains a developer preview.
+
+See [Listening mode](listening-mode.mdx) for routing and privacy details.
+
+## Path B: TypeScript library and CLI
+
+Requirements:
+
+- Node.js 22.12 or newer, or Bun 1.0 or newer;
+- macOS for the built-in system voice and native playback;
+- an API key only when using a cloud provider.
+
+```bash
+# project dependency
+bun add @arach/speakeasy
+
+# or install the CLI globally with your preferred package manager
+pnpm add --global @arach/speakeasy
+```
+
+### SDK
+
+```typescript
+import { say, SpeakEasy } from '@arach/speakeasy';
+
+await say('Hello, world!');
+await say('Hello from OpenAI', 'openai');
+
+const speaker = new SpeakEasy({
+  provider: 'openai',
+  openaiVoice: 'nova',
+  rate: 180,
+  cache: { enabled: true },
+  apiKeys: { openai: process.env.OPENAI_API_KEY },
+});
+
+await speaker.speak('The task is complete.');
+```
+
+### CLI
+
+```bash
+speakeasy "Hello, world!" --provider system
+speakeasy "Build completed" --provider openai --voice nova --cache
+speakeasy --doctor
+```
+
+## Optional API keys
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export ELEVENLABS_API_KEY="..."
+export GROQ_API_KEY="gsk_..."
+export GEMINI_API_KEY="AIza..."
+```
+
+Or configure providers once in `~/.config/speakeasy/settings.json`. Caching is
+automatic for API providers when credentials are present.
+
+## Next steps
+
+- [Listening mode](listening-mode.mdx)
+- [Configuration](configuration.mdx)
+- [Providers](providers.mdx)
+- [SDK guide](sdk.mdx)
+- [CLI reference](cli.mdx)

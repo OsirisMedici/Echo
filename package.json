@@ -1,0 +1,86 @@
+{
+  "name": "@arach/speakeasy",
+  "version": "0.3.0",
+  "description": "Convenient TTS CLI for Mac \u2014 centralized credentials + configurable caching so all your apps and agents can speak.",
+  "homepage": "https://github.com/OsirisMedici/Echo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OsirisMedici/Echo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OsirisMedici/Echo/issues"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/bin/speakeasy-cli.ts --dts --format cjs --external node:sqlite --external bun:sqlite",
+    "build:plugin-runtime": "bun build src/bin/speakeasy-cli.ts --target=bun --outfile plugins/speakeasy/skills/speakeasy/runtime/speakeasy-cli.js",
+    "package:plugin-submission": "plugins/speakeasy/tools/build-submission.sh",
+    "verify:plugin-bundle": "plugins/speakeasy/tools/verify-skill-bundle.sh",
+    "prepublishOnly": "pnpm run build",
+    "dev": "pnpm run build --watch",
+    "test": "bun test src",
+    "test:privacy": "bun test src/privacy-permissions.test.ts",
+    "test:cache": "pnpm run build && node scripts/cache-test.js",
+    "example": "pnpm run build && node examples/basic-usage.js",
+    "cli": "pnpm run build && node dist/bin/speakeasy-cli.js",
+    "docs": "cd docs-site && pnpm dev",
+    "docs:build": "cd docs-site && pnpm build"
+  },
+  "bin": {
+    "speakeasy": "dist/bin/speakeasy-cli.js"
+  },
+  "keywords": [
+    "tts",
+    "speech",
+    "text-to-speech",
+    "openai",
+    "elevenlabs",
+    "groq",
+    "macos",
+    "cache",
+    "cli"
+  ],
+  "author": "arach",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0",
+    "bun": ">=1.0.0"
+  },
+  "dependencies": {
+    "@openscout/agent-sessions": "^0.2.78",
+    "bonjour-service": "^1.4.4",
+    "chalk": "^5.6.2",
+    "commander": "^15.0.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^14.0.1",
+    "ws": "^8.21.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@arach/dewey": "^0.2.0",
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/ws": "^8.18.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "tar-fs": "^2.1.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "rollup": ">=4.59.0",
+      "esbuild": ">=0.28.1",
+      "yaml": ">=2.8.3",
+      "picomatch@>=4": ">=4.0.4"
+    }
+  },
+  "private": true
+}
