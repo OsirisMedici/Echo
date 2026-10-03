@@ -198,12 +198,14 @@ final class CodexCompletionObserver {
             let data = handle.availableData
             guard !data.isEmpty else { return }
             Task { @MainActor [weak self] in
-                self?.consume(data)
+                guard let self, self.process === process else { return }
+                self.consume(data)
             }
         }
         process.terminationHandler = { [weak self] process in
             Task { @MainActor [weak self] in
-                self?.terminated(status: process.terminationStatus)
+                guard let self, self.process === process else { return }
+                self.terminated(status: process.terminationStatus)
             }
         }
 

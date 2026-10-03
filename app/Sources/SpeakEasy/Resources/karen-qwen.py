@@ -36,8 +36,9 @@ def render(request):
             audio.setnchannels(1)
             audio.setsampwidth(2)
             audio.setframerate(rate)
-            for sentence in sentences:
+            for index, sentence in enumerate(sentences):
                 start = count / rate
+                sentence_pcm = []
                 # Split unusually long sentences only at whitespace, preserving all words.
                 parts, current = [], ""
                 for word in sentence.split():
@@ -57,18 +58,35 @@ def render(request):
                             raise ValueError("Invalid local audio")
                         pcm = (np.clip(samples, -1, 1) * 32767).round().astype("<i2")
                         audio.writeframes(pcm.tobytes())
+                        if request.get("progressive"):
+                            sentence_pcm.append(pcm.tobytes())
                         count += len(pcm)
                         generated = True
                     if not generated:
                         raise ValueError("The model generated no audio")
                     mx.clear_cache()
                 marks.append({"text": sentence, "start": start, "end": count / rate})
+                if request.get("progressive"):
+                    segment = Path(str(output) + f".segment-{index}.wav")
+                    with segment.open("xb") as file, wave.open(file, "wb") as chunk:
+                        chunk.setnchannels(1)
+                        chunk.setsampwidth(2)
+                        chunk.setframerate(rate)
+                        for pcm in sentence_pcm:
+                            chunk.writeframes(pcm)
+                    with Path(str(segment) + ".sentences.json").open("x") as file:
+                        json.dump([{"text": sentence, "start": 0, "end": count / rate - start}], file)
+                    print(json.dumps({"segment": index}), flush=True)
         with metadata.open("x") as file:
             json.dump(marks, file)
         return {"ok": True, "sampleRate": rate, "duration": count / rate}
     except BaseException:
         output.unlink(missing_ok=True)
         metadata.unlink(missing_ok=True)
+        for index in range(len(sentences)):
+            segment = Path(str(output) + f".segment-{index}.wav")
+            segment.unlink(missing_ok=True)
+            Path(str(segment) + ".sentences.json").unlink(missing_ok=True)
         raise
 
 

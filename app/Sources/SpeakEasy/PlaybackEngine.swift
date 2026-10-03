@@ -13,6 +13,8 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published private(set) var audioLevel: Float = 0
     @Published private(set) var lastError: String?
     @Published private(set) var lastFinishedItemID: UUID?
+    @Published private(set) var lastStoppedItemID: UUID?
+    @Published private(set) var isReceivingAudio = false
     @Published var autoplayEnabled = true
     @Published private(set) var volume: Float = 0.8
     @Published private(set) var playbackRate: Float = 1
@@ -34,6 +36,75 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     private var player: AVAudioPlayer?
     private var progressTimer: Timer?
+    private var progressiveAudio: [UUID: ProgressiveSpeechBuffer] = [:]
+    private var segmentIndex = 0
+
+    func beginProgressiveAudio(_ item: PlaybackItem) throws {
+        var buffer = ProgressiveSpeechBuffer()
+        let url = URL(fileURLWithPath: item.audioPath)
+        let audio = try AVAudioPlayer(contentsOf: url)
+        try buffer.append(url: url, duration: audio.duration,
+                          sentences: SpeechSentences.load(for: url, duration: audio.duration))
+        progressiveAudio[item.id] = buffer
+        do { try enqueue(item, autoplay: true) }
+        catch {
+            progressiveAudio.removeValue(forKey: item.id)?.removeFiles()
+            throw error
+        }
+    }
+
+    func appendProgressiveAudio(itemID: UUID, url: URL) throws {
+        guard var buffer = progressiveAudio[itemID] else { throw CancellationError() }
+        let audio = try AVAudioPlayer(contentsOf: url)
+        try buffer.append(url: url, duration: audio.duration,
+                          sentences: SpeechSentences.load(for: url, duration: audio.duration))
+        progressiveAudio[itemID] = buffer
+        guard currentItem?.id == itemID else { return }
+        duration = buffer.duration
+        sentences = buffer.sentences
+        if player == nil, state == .loading { try playProgressiveSegment(at: segmentIndex) }
+    }
+
+    func completeProgressiveAudio(itemID: UUID, finalURL: URL) throws {
+        guard var buffer = progressiveAudio[itemID] else { throw CancellationError() }
+        buffer.isComplete = true
+        buffer.finalAudioURL = finalURL
+        progressiveAudio[itemID] = buffer
+        guard currentItem?.id == itemID else { return }
+        isReceivingAudio = false
+        if player == nil, segmentIndex >= buffer.segments.count {
+            finishCurrentItem(naturallyFinished: true)
+            if autoplayEnabled { try playNext() }
+        }
+    }
+
+    private func playProgressiveSegment(at index: Int, localTime: TimeInterval = 0, paused: Bool = false) throws {
+        guard let item = currentItem, let buffer = progressiveAudio[item.id],
+              buffer.segments.indices.contains(index) else { return }
+        let next = try AVAudioPlayer(contentsOf: buffer.segments[index].url)
+        player?.stop()
+        next.delegate = self
+        next.enableRate = true
+        next.volume = volume
+        next.rate = playbackRate
+        next.isMeteringEnabled = true
+        next.prepareToPlay()
+        next.currentTime = localTime
+        player = next
+        segmentIndex = index
+        duration = buffer.duration
+        sentences = buffer.sentences
+        isReceivingAudio = !buffer.isComplete
+        if paused {
+            state = .paused
+            refreshProgress()
+        } else {
+            guard next.play() else { throw PlayerEngineError.couldNotStartAudio }
+            lastError = nil
+            state = .playing
+            startProgressTimer()
+        }
+    }
 
     private override init() {
         super.init()
@@ -84,15 +155,32 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     func pause() {
-        guard let player, player.isPlaying else { return }
+        if currentItem.map({ progressiveAudio[$0.id] != nil }) == true, state == .loading {
+            state = .paused
+            return
+        }
+        guard let player, currentItem != nil else { return }
         player.pause()
         state = .paused
         refreshProgress()
+        progressTimer?.invalidate()
+        progressTimer = nil
     }
 
     func resume() throws {
+        if let item = currentItem, let buffer = progressiveAudio[item.id], player == nil {
+            if buffer.segments.indices.contains(segmentIndex) {
+                try playProgressiveSegment(at: segmentIndex)
+            } else { state = .loading }
+            return
+        }
         if let player, currentItem != nil {
-            player.play()
+            guard player.prepareToPlay(), player.play() else {
+                state = .failed
+                lastError = PlayerEngineError.couldNotStartAudio.localizedDescription
+                throw PlayerEngineError.couldNotStartAudio
+            }
+            lastError = nil
             state = .playing
             startProgressTimer()
             return
@@ -101,7 +189,7 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     func togglePlayback() throws {
-        if state == .playing {
+        if state == .playing || state == .loading {
             pause()
         } else {
             try resume()
@@ -109,6 +197,7 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     func stop() {
+        lastStoppedItemID = currentItem?.id
         stopCurrent(resetPosition: true)
     }
 
@@ -121,23 +210,35 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     func skip() throws {
+        lastStoppedItemID = currentItem?.id
         stopCurrent(resetPosition: true)
         try playNext()
     }
 
     func clearQueue() {
+        for item in queue { progressiveAudio.removeValue(forKey: item.id)?.removeFiles() }
         queue.removeAll()
     }
 
     func removeQueueItem(id: UUID) {
+        progressiveAudio.removeValue(forKey: id)?.removeFiles()
         queue.removeAll { $0.id == id }
     }
 
     func removeQueuedCompletion(activityID: UUID) {
+        for item in queue where item.completionActivityID == activityID {
+            progressiveAudio.removeValue(forKey: item.id)?.removeFiles()
+        }
         queue.removeAll { $0.completionActivityID == activityID }
     }
 
     func seek(to position: TimeInterval) {
+        if let item = currentItem, let buffer = progressiveAudio[item.id],
+           let target = buffer.position(at: position) {
+            do { try playProgressiveSegment(at: target.index, localTime: target.localTime, paused: state == .paused) }
+            catch { lastError = error.localizedDescription; state = .failed }
+            return
+        }
         guard let player else { return }
         player.currentTime = min(max(position, 0), player.duration)
         refreshProgress()
@@ -300,6 +401,24 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor [weak self] in
             guard let self else { return }
+            guard self.player === player else { return }
+            if let item = self.currentItem, let buffer = self.progressiveAudio[item.id] {
+                self.currentTime = buffer.offset(for: self.segmentIndex) + player.duration
+                self.segmentIndex += 1
+                if buffer.segments.indices.contains(self.segmentIndex) {
+                    do { try self.playProgressiveSegment(at: self.segmentIndex) }
+                    catch { self.lastError = error.localizedDescription; self.stopCurrent(resetPosition: true); self.state = .failed }
+                    return
+                }
+                if !buffer.isComplete {
+                    self.player = nil
+                    self.progressTimer?.invalidate()
+                    self.progressTimer = nil
+                    self.audioLevel = 0
+                    self.state = .loading
+                    return
+                }
+            }
             self.finishCurrentItem(naturallyFinished: true)
             if self.autoplayEnabled {
                 do {
@@ -334,6 +453,15 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
         state = .loading
 
         do {
+            if progressiveAudio[item.id] != nil {
+                currentItem = item
+                segmentIndex = 0
+                playbackRate = VoiceLane.normalizedPlaybackRate(item.playbackRate) ?? playbackRate
+                try playProgressiveSegment(at: 0)
+                lastError = nil
+                HUDWindowManager.shared.showPlayback(item)
+                return
+            }
             let nextPlayer = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: item.audioPath))
             let itemPlaybackRate = VoiceLane.normalizedPlaybackRate(item.playbackRate) ?? playbackRate
             playbackRate = itemPlaybackRate
@@ -351,14 +479,17 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
             sentences = SpeechSentences.load(for: URL(fileURLWithPath: item.audioPath), duration: duration)
             audioLevel = 0
             lastError = nil
-            nextPlayer.play()
+            guard nextPlayer.play() else { throw PlayerEngineError.couldNotStartAudio }
             state = .playing
             HUDWindowManager.shared.showPlayback(item)
             startProgressTimer()
         } catch {
+            progressiveAudio.removeValue(forKey: item.id)?.removeFiles()
             player = nil
             currentItem = nil
+            isReceivingAudio = false
             state = .failed
+            lastError = error.localizedDescription
             throw PlayerEngineError.couldNotOpenAudio(error.localizedDescription)
         }
     }
@@ -373,6 +504,10 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     private func finishCurrentItem(naturallyFinished: Bool, removeAudio: Bool = true) {
         let finishedItem = currentItem
+        if removeAudio, let id = finishedItem?.id {
+            progressiveAudio.removeValue(forKey: id)?.removeFiles()
+        }
+        isReceivingAudio = false
         if naturallyFinished {
             lastFinishedItemID = finishedItem?.id
         }
@@ -408,8 +543,18 @@ final class PlaybackEngine: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     private func refreshProgress() {
         guard let player else { return }
-        currentTime = player.currentTime
-        duration = player.duration
+        if state == .playing, !player.isPlaying, player.currentTime < player.duration - 0.01 {
+            state = .paused
+            progressTimer?.invalidate()
+            progressTimer = nil
+        }
+        if let item = currentItem, let buffer = progressiveAudio[item.id] {
+            currentTime = buffer.offset(for: segmentIndex) + player.currentTime
+            duration = buffer.duration
+        } else {
+            currentTime = player.currentTime
+            duration = player.duration
+        }
         player.updateMeters()
         let averagePower = player.averagePower(forChannel: 0)
         let normalized = pow(10, averagePower / 20)
@@ -436,6 +581,7 @@ enum PlayerEngineError: LocalizedError {
     case audioPathMustBeAbsolute
     case audioFileMissing(String)
     case couldNotOpenAudio(String)
+    case couldNotStartAudio
     case missingArgument(String)
 
     var errorDescription: String? {
@@ -446,6 +592,8 @@ enum PlayerEngineError: LocalizedError {
             return "audio_file_missing:\(path)"
         case .couldNotOpenAudio(let detail):
             return "could_not_open_audio:\(detail)"
+        case .couldNotStartAudio:
+            return "Audio playback could not start. Check your Mac's audio output, then try Play again."
         case .missingArgument(let name):
             return "missing_argument:\(name)"
         }

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 struct KarenVoice: Identifiable, Equatable, Sendable {
     let id: String
@@ -75,8 +76,10 @@ actor KarenVoiceRenderer {
         let output: String
         let model_dir: String
         let sentences: [String]
+        let progressive: Bool
     }
-    static func render(text: String, voice: String, rate: Int) async throws -> URL {
+    static func render(text: String, voice: String, rate: Int,
+                       onSegment: (@Sendable (URL) async throws -> Void)? = nil) async throws -> URL {
         guard let id = Int(voice), KarenVoiceCatalog.isReady(voice) else {
             throw ConfiguredResponseNarratorError.generationFailed("This Karen voice pack is not ready on this Mac. Check the Karen section.")
         }
@@ -85,9 +88,12 @@ actor KarenVoiceRenderer {
         FileManager.default.createFile(atPath: log.path, contents: nil, attributes: [.posixPermissions: 0o600])
         let errorHandle = try FileHandle(forWritingTo: log)
         defer { try? errorHandle.close(); try? FileManager.default.removeItem(at: log) }
-        let data = try JSONEncoder().encode(Request(text: text, voice: id, speed: min(1.5, max(0.8, Float(rate) / 180)), output: output.path, model_dir: KarenVoiceCatalog.modelDirectory(voice).path, sentences: SpeechSentences.split(text)))
+        let sentences = SpeechSentences.split(text)
+        let progressive = KarenVoiceCatalog.isQwen(voice) && onSegment != nil
+        let data = try JSONEncoder().encode(Request(text: text, voice: id, speed: min(1.5, max(0.8, Float(rate) / 180)), output: output.path, model_dir: KarenVoiceCatalog.modelDirectory(voice).path, sentences: sentences, progressive: progressive))
         let process = Process()
         let input = Pipe()
+        let progress = Pipe()
         if KarenVoiceCatalog.isQwen(voice) {
             guard let script = KarenVoiceCatalog.qwenScriptURL else {
                 throw ConfiguredResponseNarratorError.generationFailed("Echo's local Qwen adapter is missing. Rebuild Echo before using this voice.")
@@ -103,12 +109,64 @@ actor KarenVoiceRenderer {
             process.executableURL = KarenVoiceCatalog.helperURL
         }
         process.standardInput = input
-        process.standardOutput = FileHandle.nullDevice
+        process.standardOutput = progressive ? progress : FileHandle.nullDevice
         process.standardError = errorHandle
         do {
             try Task.checkCancellation()
             let status: Int32 = try await withTaskCancellationHandler(operation: {
-                try await withCheckedThrowingContinuation { continuation in
+                if progressive, let onSegment {
+                    try process.run()
+                    try input.fileHandleForWriting.write(contentsOf: data)
+                    try input.fileHandleForWriting.close()
+                    let events = AsyncThrowingStream<Int, Error> { continuation in
+                        Task.detached {
+                            do {
+                                var pending = Data()
+                                var buffer = [UInt8](repeating: 0, count: 4096)
+                                while true {
+                                    // FileHandle.read(upToCount:) fills its requested buffer on
+                                    // macOS pipes, hiding short progress messages until EOF.
+                                    let count = Darwin.read(progress.fileHandleForReading.fileDescriptor, &buffer, buffer.count)
+                                    if count == 0 { break }
+                                    if count < 0 {
+                                        if errno == EINTR { continue }
+                                        throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                                    }
+                                    pending.append(contentsOf: buffer.prefix(count))
+                                    while let end = pending.firstIndex(of: 10) {
+                                        let line = pending.prefix(upTo: end)
+                                        pending.removeSubrange(...end)
+                                        if let value = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+                                           let index = value["segment"] as? Int {
+                                            continuation.yield(index)
+                                        }
+                                    }
+                                    guard pending.count < 65_536 else {
+                                        throw ConfiguredResponseNarratorError.generationFailed("Local voice progress exceeded its limit.")
+                                    }
+                                }
+                                process.waitUntilExit()
+                                continuation.finish()
+                            } catch { continuation.finish(throwing: error) }
+                        }
+                    }
+                    var expected = 0
+                    for try await index in events {
+                        try Task.checkCancellation()
+                        guard index == expected, index < sentences.count else {
+                            throw ConfiguredResponseNarratorError.generationFailed("Local voice sentence order was invalid.")
+                        }
+                        let segment = URL(fileURLWithPath: output.path + ".segment-\(index).wav")
+                        try await onSegment(segment)
+                        expected += 1
+                    }
+                    try Task.checkCancellation()
+                    guard process.terminationStatus != 0 || expected == sentences.count else {
+                        throw ConfiguredResponseNarratorError.generationFailed("Local voice did not finish every sentence.")
+                    }
+                    return process.terminationStatus
+                }
+                return try await withCheckedThrowingContinuation { continuation in
                 process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
                 do {
                     try process.run()
@@ -135,8 +193,17 @@ actor KarenVoiceRenderer {
             }
             return output
         } catch {
+            if process.isRunning {
+                process.terminate()
+                await Task.detached { process.waitUntilExit() }.value
+            }
             try? FileManager.default.removeItem(at: output)
             try? FileManager.default.removeItem(at: SpeechSentences.metadataURL(for: output))
+            for index in sentences.indices {
+                let segment = URL(fileURLWithPath: output.path + ".segment-\(index).wav")
+                try? FileManager.default.removeItem(at: segment)
+                try? FileManager.default.removeItem(at: SpeechSentences.metadataURL(for: segment))
+            }
             throw error
         }
     }
