@@ -33,6 +33,8 @@ final class CompletionSubscriptionController: ObservableObject {
     @Published private(set) var observerState: CompletionSubscriptionPresentationState = .off
     @Published private(set) var lastError: String?
     @Published private(set) var isFeatureEnabled: Bool
+    @Published private(set) var preparingActivityID: UUID?
+    @Published private(set) var preparingVoiceName: String?
 
     private let store: CompletionSubscriptionStore
     private let observer: CodexCompletionObserver
@@ -41,6 +43,8 @@ final class CompletionSubscriptionController: ObservableObject {
     private var playbackObservations: Set<AnyCancellable> = []
     private var processingTail: Task<Void, Never>?
     private var started = false
+    private var observationRetry: Task<Void, Never>?
+    private var renderTasks: [UUID: Task<URL, Error>] = [:]
 
     init(
         store: CompletionSubscriptionStore = CompletionSubscriptionStore(),
@@ -82,6 +86,11 @@ final class CompletionSubscriptionController: ObservableObject {
 
     var mostRecentActivity: CompletionActivity? { activities.last }
 
+    var preparingSentence: String? {
+        guard let id = preparingActivityID, let activity = activities.first(where: { $0.id == id }) else { return nil }
+        return SpeechSentences.split(activity.spokenText ?? activity.response).first
+    }
+
     func start() {
         guard !started else { return }
         started = true
@@ -95,6 +104,8 @@ final class CompletionSubscriptionController: ObservableObject {
     }
 
     func stop() {
+        for task in renderTasks.values { task.cancel() }
+        observationRetry?.cancel()
         observer.stop()
         started = false
         processingTail?.cancel()
@@ -108,6 +119,8 @@ final class CompletionSubscriptionController: ObservableObject {
 
     func subscribe(to task: ListeningTaskLock) {
         guard isFeatureEnabled else { return }
+        for rendering in renderTasks.values { rendering.cancel() }
+        observationRetry?.cancel()
         observer.stop()
         subscription = CompletionSubscription(task: task)
         observerState = .subscribed
@@ -129,12 +142,15 @@ final class CompletionSubscriptionController: ObservableObject {
             startObservation()
             recoverPendingActivities()
         } else {
+            observationRetry?.cancel()
             observer.stop()
             observerState = .off
         }
     }
 
     func unsubscribe() {
+        for rendering in renderTasks.values { rendering.cancel() }
+        observationRetry?.cancel()
         observer.stop()
         subscription = nil
         observerState = .off
@@ -182,6 +198,11 @@ final class CompletionSubscriptionController: ObservableObject {
 
     func dismiss(_ activityID: UUID) {
         guard let index = activities.firstIndex(where: { $0.id == activityID }) else { return }
+        renderTasks[activityID]?.cancel()
+        if preparingActivityID == activityID {
+            preparingActivityID = nil
+            preparingVoiceName = nil
+        }
         if PlaybackEngine.shared.currentItem?.completionActivityID == activityID {
             PlaybackEngine.shared.stop()
         } else {
@@ -192,6 +213,12 @@ final class CompletionSubscriptionController: ObservableObject {
         persist()
     }
 
+    func stopReading() {
+        if let id = preparingActivityID { dismiss(id) }
+        if let id = PlaybackEngine.shared.currentItem?.completionActivityID { dismiss(id) }
+        else { PlaybackEngine.shared.stop() }
+    }
+
     /// Manual replay is an explicit user action and is allowed while the
     /// channel is muted. It changes only the speech projection, never Codex.
     func replay(_ activityID: UUID) {
@@ -199,7 +226,18 @@ final class CompletionSubscriptionController: ObservableObject {
         enqueueForReplay(activity)
     }
 
+    private func retryObservation() {
+        guard SpeakEasyEdition.isDevelopment, started, isFeatureEnabled, subscription?.isEnabled == true else { return }
+        observationRetry?.cancel()
+        observationRetry = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled, let self, self.started, self.subscription?.isEnabled == true else { return }
+            self.startObservation()
+        }
+    }
+
     private func startObservation() {
+        observationRetry?.cancel()
         guard isFeatureEnabled, let subscription, subscription.isEnabled else {
             observerState = .off
             return
@@ -214,6 +252,7 @@ final class CompletionSubscriptionController: ObservableObject {
                     guard let self else { return }
                     switch state {
                     case .watching:
+                        self.lastError = nil
                         self.observerState = self.channel.isMuted ? .muted : .watching
                     case .unavailable:
                         self.observerState = .unavailable
@@ -225,6 +264,7 @@ final class CompletionSubscriptionController: ObservableObject {
                     if let error {
                         self.lastError = error
                         self.persist()
+                        self.retryObservation()
                     }
                 },
                 onMessage: { [weak self] message in
@@ -240,6 +280,7 @@ final class CompletionSubscriptionController: ObservableObject {
             }
             lastError = error.localizedDescription
             persist()
+            retryObservation()
         }
     }
 
@@ -336,7 +377,7 @@ final class CompletionSubscriptionController: ObservableObject {
 
     private func recoverPendingActivities() {
         guard isFeatureEnabled, subscription?.isEnabled == true else { return }
-        for activity in activities {
+        for activity in activities where activity.taskID == subscription?.task.id {
             switch activity.state {
             case .detected:
                 guard !channel.isMuted else {
@@ -378,6 +419,7 @@ final class CompletionSubscriptionController: ObservableObject {
 
     private func synthesizeAndEnqueue(activityID: UUID, markDurable: Bool) async {
         guard isFeatureEnabled,
+              renderTasks[activityID] == nil,
               let activity = activities.first(where: { $0.id == activityID }),
               !activity.response.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return }
@@ -415,17 +457,60 @@ final class CompletionSubscriptionController: ObservableObject {
                 persist()
             }
             let narration = channelNarrationConfiguration()
-            let audioURL = try await narrator.render(text: spokenText, configuration: narration)
+            lastError = nil
+            preparingActivityID = activityID
+            preparingVoiceName = KarenVoiceCatalog.voice(narration.voice)?.name ?? "your voice"
+            defer {
+                renderTasks.removeValue(forKey: activityID)
+                if preparingActivityID == activityID {
+                    preparingActivityID = nil
+                    preparingVoiceName = nil
+                }
+            }
+            let progressive = SpeakEasyEdition.isDevelopment && narration.provider == "karen" && KarenVoiceCatalog.isQwen(narration.voice)
+            let rendering = Task { [weak self] () throws -> URL in
+                guard let self else { throw CancellationError() }
+                if progressive {
+                    return try await KarenVoiceRenderer.render(
+                        text: ConfiguredResponseNarrator.flatten(spokenText), voice: narration.voice, rate: narration.rate,
+                        onSegment: { [weak self] url in
+                            try await self?.receiveSegment(activityID: activityID, url: url, markDurable: markDurable)
+                        })
+                }
+                return try await self.narrator.render(text: spokenText, configuration: narration)
+            }
+            renderTasks[activityID] = rendering
+            let audioURL = try await withTaskCancellationHandler(operation: {
+                try await rendering.value
+            }, onCancel: { rendering.cancel() })
+            try Task.checkCancellation()
             guard subscription?.task.id == activity.taskID else {
                 try? FileManager.default.removeItem(at: audioURL)
-                return
+                throw CancellationError()
             }
             updateActivity(activityID) {
                 $0.audioPath = audioURL.path
                 $0.provider = narration.provider
             }
-            enqueuePrepared(activityID: activityID, audioPath: audioURL.path, markDurable: markDurable)
+            if progressive {
+                do { try PlaybackEngine.shared.completeProgressiveAudio(itemID: activityID, finalURL: audioURL) }
+                catch {
+                    try? FileManager.default.removeItem(at: audioURL)
+                    try? FileManager.default.removeItem(at: SpeechSentences.metadataURL(for: audioURL))
+                    throw error
+                }
+                persist()
+            } else {
+                enqueuePrepared(activityID: activityID, audioPath: audioURL.path, markDurable: markDurable)
+            }
+        } catch is CancellationError {
+            PlaybackEngine.shared.removeQueuedCompletion(activityID: activityID)
+            if PlaybackEngine.shared.currentItem?.completionActivityID == activityID {
+                PlaybackEngine.shared.stop()
+            }
         } catch {
+            PlaybackEngine.shared.removeQueuedCompletion(activityID: activityID)
+            if PlaybackEngine.shared.currentItem?.completionActivityID == activityID { PlaybackEngine.shared.stop() }
             updateActivity(activityID) {
                 $0.state = .failed
                 $0.failure = error.localizedDescription
@@ -435,10 +520,28 @@ final class CompletionSubscriptionController: ObservableObject {
         }
     }
 
-    private func enqueuePrepared(activityID: UUID, audioPath: String, markDurable: Bool) {
+    private func receiveSegment(activityID: UUID, url: URL, markDurable: Bool) throws {
+        try Task.checkCancellation()
+        guard let activity = activities.first(where: { $0.id == activityID }),
+              activity.taskID == subscription?.task.id else { throw CancellationError() }
+        // Stop cancels the owning render task. A prior dismissed state must
+        // still allow a fresh, explicit Replay to deliver its first segment.
+        if preparingActivityID == activityID {
+            preparingActivityID = nil
+            preparingVoiceName = nil
+            guard enqueuePrepared(activityID: activityID, audioPath: url.path, markDurable: markDurable, progressive: true) else {
+                throw ConfiguredResponseNarratorError.generationFailed("Echo could not start the first sentence.")
+            }
+        } else {
+            try PlaybackEngine.shared.appendProgressiveAudio(itemID: activityID, url: url)
+        }
+    }
+
+    @discardableResult
+    private func enqueuePrepared(activityID: UUID, audioPath: String, markDurable: Bool, progressive: Bool = false) -> Bool {
         guard let index = activities.firstIndex(where: { $0.id == activityID }),
               FileManager.default.fileExists(atPath: audioPath)
-        else { return }
+        else { return false }
         let activity = activities[index]
         let spokenText = activity.spokenText ?? CompletionSpeechProjector.project(activity.response)
         let narration = channelNarrationConfiguration()
@@ -470,7 +573,9 @@ final class CompletionSubscriptionController: ObservableObject {
         )
         PlaybackEngine.shared.setVolume(Float(channel.volume))
         do {
-            try PlaybackEngine.shared.enqueue(item, priority: .normal, interrupt: false, autoplay: true)
+            if progressive { try PlaybackEngine.shared.beginProgressiveAudio(item) }
+            else { try PlaybackEngine.shared.enqueue(item, priority: .normal, interrupt: false, autoplay: true) }
+            return true
         } catch {
             updateActivity(activityID) {
                 $0.state = .failed
@@ -478,10 +583,19 @@ final class CompletionSubscriptionController: ObservableObject {
             }
             lastError = error.localizedDescription
             persist()
+            return false
         }
     }
 
     private func observePlayback() {
+        PlaybackEngine.shared.$lastStoppedItemID
+            .receive(on: RunLoop.main)
+            .sink { [weak self] id in
+                guard let self, let id, self.renderTasks[id] != nil else { return }
+                self.renderTasks[id]?.cancel()
+                self.updateActivity(id) { $0.state = .dismissed }
+                self.persist()
+            }.store(in: &playbackObservations)
         PlaybackEngine.shared.$currentItem
             .receive(on: RunLoop.main)
             .sink { [weak self] item in

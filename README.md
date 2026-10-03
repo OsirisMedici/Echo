@@ -4,6 +4,12 @@ A personal macOS reader for Codex replies, built on [SpeakEasy](https://github.c
 
 Echo connects a Codex chat, reads completed replies with local neural voices, and puts playback controls in a small menu-bar player. The Karen section contains our voice integrations. Echo is a separate development edition; the original SpeakEasy installation and settings stay separate.
 
+## Parked experiment
+
+Echo is parked as of 3 October 2026. The progressive narration experiment did not
+meet the desired listening experience and has not been accepted as a finished
+product. See [the handoff](docs/ECHO_PARKED_HANDOFF.md) before resuming.
+
 ## Current features
 
 - Automatic reading of connected Codex chats and manual speech controls.
@@ -50,7 +56,7 @@ cargo test --locked --manifest-path karen-voice/Cargo.toml
 cd app && swift test
 ```
 
-Current limitations: Qwen prepares the complete reply before playback, so long replies can take time to start. The 0.6B quantized local model may sound different from larger web-demo models. Desktop switching behavior still needs interactive acceptance. Echo does not highlight spoken text inside Codex. Installation and model provisioning are still a developer workflow.
+Current limitations: the parked development experiment delivers completed Qwen sentences progressively, but model startup and synthesis still cause long delays and buffer gaps. Codex supplies only completed replies; opening a different chat does not immediately retarget Echo. The 0.6B quantized local model may sound different from larger web-demo models. Desktop switching behavior still needs interactive acceptance. Echo does not highlight spoken text inside Codex. Installation and model provisioning are still a developer workflow.
 
 ## Origin and license
 
